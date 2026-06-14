@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  securelens:
+    build: .
+    container_name: securelens
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=False
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=5000
+      - DEVICE=cpu
+    volumes:
+      - ./client/uploads:/app/client/uploads
+      - ./logs:/app/logs
+    networks:
+      - securelens-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  uploads:
+  logs:
+
+networks:
+  securelens-network:
+    driver: bridge

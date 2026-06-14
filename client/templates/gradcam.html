@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SecureLens — GradCAM Explainability</title>
+  <style>
+    :root{
+      --bg:#030712;--surface:rgba(255,255,255,0.03);
+      --border:rgba(255,255,255,0.07);--text:#f1f5f9;
+      --muted:#64748b;--accent:#60a5fa;--green:#4ade80;
+      --red:#f87171;--purple:#a78bfa;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Segoe UI',system-ui,sans-serif;
+      background:var(--bg);color:var(--text);min-height:100vh;
+    }
+
+    .header{
+      display:flex;align-items:center;justify-content:space-between;
+      flex-wrap:wrap;gap:1rem;padding:.875rem 2rem;
+      background:rgba(3,7,18,.9);backdrop-filter:blur(24px);
+      border-bottom:1px solid var(--border);
+      position:sticky;top:0;z-index:100;
+    }
+    .logo{display:flex;align-items:center;gap:12px}
+    .logo-mark{
+      width:36px;height:36px;border-radius:9px;
+      background:linear-gradient(135deg,#1e3a5f,#3b82f6);
+      display:flex;align-items:center;justify-content:center;
+      font-size:1rem;
+    }
+    .logo h1{
+      font-size:1.1rem;font-weight:700;
+      background:linear-gradient(135deg,#60a5fa,#a78bfa);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      background-clip:text;
+    }
+    .logo p{font-size:.65rem;color:var(--muted)}
+    .back{
+      padding:6px 14px;border-radius:8px;font-size:.78rem;
+      color:#94a3b8;text-decoration:none;
+      border:1px solid var(--border);transition:all .2s;
+    }
+    .back:hover{color:var(--accent);border-color:rgba(96,165,250,.3)}
+
+    .page{max-width:1200px;margin:0 auto;padding:2rem}
+
+    /* Upload section */
+    .upload-section{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:16px;padding:1.5rem;margin-bottom:1.5rem;
+    }
+    .section-head{
+      display:flex;align-items:center;gap:10px;
+      margin-bottom:1.25rem;padding-bottom:1rem;
+      border-bottom:1px solid var(--border);
+    }
+    .section-ico{
+      width:34px;height:34px;border-radius:8px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:.95rem;background:rgba(96,165,250,.12);
+    }
+    .section-head h2{font-size:.9rem;font-weight:600}
+
+    .upload-row{display:flex;gap:1rem;flex-wrap:wrap}
+
+    .drop{
+      flex:1;min-width:240px;
+      border:2px dashed rgba(96,165,250,.2);
+      border-radius:12px;min-height:180px;
+      display:flex;align-items:center;justify-content:center;
+      cursor:pointer;transition:all .25s;
+      background:rgba(96,165,250,.02);position:relative;
+      overflow:hidden;
+    }
+    .drop:hover,.drop.over{
+      border-color:rgba(96,165,250,.45);
+      background:rgba(96,165,250,.05);
+    }
+    .drop-inner{text-align:center;padding:1.5rem}
+    .drop-emoji{
+      font-size:2.5rem;display:block;margin-bottom:.5rem;
+      animation:float 3s ease-in-out infinite;
+    }
+    @keyframes float{
+      0%,100%{transform:translateY(0)}
+      50%{transform:translateY(-6px)}
+    }
+    .drop-title{font-size:.85rem;font-weight:600}
+    .drop-sub{font-size:.72rem;color:var(--muted);margin-top:3px}
+    .preview-img{
+      width:100%;height:180px;object-fit:contain;border-radius:8px;
+    }
+
+    .controls{flex:0 0 220px}
+    .ctrl-group{margin-bottom:1rem}
+    .ctrl-lbl{
+      font-size:.72rem;font-weight:600;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.05em;
+      margin-bottom:.5rem;display:block;
+    }
+    .mode-btns{display:flex;flex-direction:column;gap:6px}
+    .mode-btn{
+      padding:8px 12px;border-radius:8px;font-size:.78rem;
+      font-weight:500;cursor:pointer;border:1px solid var(--border);
+      background:rgba(255,255,255,.03);color:#94a3b8;
+      transition:all .2s;text-align:left;
+      display:flex;align-items:center;gap:8px;
+    }
+    .mode-btn.active{
+      background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.35);
+      color:var(--accent);
+    }
+    .mode-btn:hover:not(.active){
+      background:rgba(255,255,255,.05);color:var(--text);
+    }
+
+    .run-btn{
+      width:100%;padding:12px;border-radius:10px;
+      background:linear-gradient(135deg,#1d4ed8,#6d28d9);
+      color:white;border:none;font-size:.88rem;font-weight:700;
+      cursor:pointer;margin-top:.75rem;
+      transition:all .2s;
+      box-shadow:0 4px 16px rgba(29,78,216,.3);
+    }
+    .run-btn:hover:not(:disabled){
+      transform:translateY(-1px);
+      box-shadow:0 8px 24px rgba(29,78,216,.45);
+    }
+    .run-btn:disabled{
+      background:rgba(30,41,59,.6);color:#334155;
+      box-shadow:none;cursor:not-allowed;
+    }
+
+    /* Results */
+    .results{display:none}
+    .results.show{display:block}
+
+    /* Image comparison */
+    .img-grid{
+      display:grid;grid-template-columns:repeat(3,1fr);
+      gap:1rem;margin-bottom:1.5rem;
+    }
+    @media(max-width:768px){.img-grid{grid-template-columns:1fr}}
+
+    .img-card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:14px;overflow:hidden;
+      transition:all .25s;
+    }
+    .img-card:hover{
+      border-color:rgba(96,165,250,.25);
+      transform:translateY(-2px);
+      box-shadow:0 12px 32px rgba(0,0,0,.3);
+    }
+    .img-card-head{
+      padding:.75rem 1rem;
+      border-bottom:1px solid var(--border);
+      display:flex;align-items:center;gap:8px;
+    }
+    .img-card-title{font-size:.78rem;font-weight:600}
+    .img-card-sub{font-size:.65rem;color:var(--muted);margin-top:1px}
+    .img-dot{
+      width:8px;height:8px;border-radius:50%;flex-shrink:0;
+    }
+    .img-wrap{
+      position:relative;background:#000;
+      aspect-ratio:1/1;overflow:hidden;
+    }
+    .img-wrap img{
+      width:100%;height:100%;object-fit:contain;
+      transition:opacity .3s;
+    }
+
+    /* Prediction verdict */
+    .verdict-row{
+      display:grid;grid-template-columns:1fr 1fr;
+      gap:1rem;margin-bottom:1.5rem;
+    }
+    @media(max-width:600px){.verdict-row{grid-template-columns:1fr}}
+
+    .verdict-card{
+      border-radius:14px;padding:1.25rem;
+      border:1px solid;text-align:center;
+    }
+    .verdict-card.normal{
+      background:rgba(5,46,22,.4);border-color:rgba(22,101,52,.5);
+    }
+    .verdict-card.pneumonia{
+      background:rgba(44,16,16,.4);border-color:rgba(127,29,29,.5);
+    }
+    .verdict-icon{font-size:2rem;display:block;margin-bottom:.5rem}
+    .verdict-label{
+      font-size:1.5rem;font-weight:800;letter-spacing:-.02em;
+    }
+    .verdict-card.normal   .verdict-label{color:var(--green)}
+    .verdict-card.pneumonia .verdict-label{color:var(--red)}
+    .verdict-conf{font-size:.78rem;color:var(--muted);margin-top:4px}
+
+    .stats-card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:14px;padding:1.25rem;
+    }
+    .stats-title{
+      font-size:.72rem;font-weight:600;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.05em;
+      margin-bottom:1rem;
+    }
+    .stat-row{
+      display:flex;justify-content:space-between;
+      align-items:center;padding:7px 0;
+      border-bottom:1px solid rgba(255,255,255,.04);
+      font-size:.78rem;
+    }
+    .stat-row:last-child{border-bottom:none}
+    .stat-key{color:var(--muted)}
+    .stat-val{font-weight:600;color:var(--text)}
+
+    /* Explanation box */
+    .explain-box{
+      background:rgba(12,28,50,.6);
+      border:1px solid rgba(29,78,216,.2);
+      border-radius:14px;padding:1.25rem;
+      margin-bottom:1.5rem;
+    }
+    .explain-title{
+      font-size:.78rem;font-weight:600;color:var(--accent);
+      margin-bottom:.875rem;
+      text-transform:uppercase;letter-spacing:.05em;
+    }
+    .explain-grid{
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+      gap:.875rem;
+    }
+    .explain-item{
+      background:rgba(255,255,255,.02);
+      border:1px solid var(--border);border-radius:10px;
+      padding:.875rem;
+    }
+    .explain-item-title{
+      font-size:.72rem;font-weight:600;color:var(--text);
+      margin-bottom:.375rem;
+    }
+    .explain-item-text{
+      font-size:.7rem;color:var(--muted);line-height:1.6;
+    }
+
+    /* Loading */
+    .loading-state{
+      text-align:center;padding:3rem;
+      display:none;
+    }
+    .loading-state.show{display:block}
+    .rings{
+      width:56px;height:56px;margin:0 auto 1.25rem;
+      position:relative;
+    }
+    .rings::before,.rings::after{
+      content:'';position:absolute;inset:0;
+      border-radius:50%;border:2.5px solid transparent;
+    }
+    .rings::before{
+      border-top-color:var(--accent);
+      border-right-color:rgba(96,165,250,.2);
+      animation:spin .9s linear infinite;
+    }
+    .rings::after{
+      inset:6px;border-bottom-color:var(--purple);
+      border-left-color:rgba(167,139,250,.2);
+      animation:spin 1.4s linear infinite reverse;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-msg{font-size:.85rem;color:var(--accent);font-weight:500}
+    .loading-sub{font-size:.72rem;color:var(--muted);margin-top:.5rem}
+
+    /* Legend */
+    .legend{
+      display:flex;align-items:center;gap:1rem;
+      flex-wrap:wrap;margin-bottom:.75rem;font-size:.72rem;
+      color:var(--muted);
+    }
+    .legend-item{display:flex;align-items:center;gap:6px}
+    .legend-color{width:20px;height:8px;border-radius:4px}
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">
+    <div class="logo-mark">🧠</div>
+    <div>
+      <h1>SecureLens GradCAM</h1>
+      <p>AI explainability — see what the model sees</p>
+    </div>
+  </div>
+  <a href="/" class="back">← Back to Demo</a>
+</header>
+
+<div class="page">
+
+  <!-- Upload -->
+  <div class="upload-section">
+    <div class="section-head">
+      <div class="section-ico">📤</div>
+      <div>
+        <h2>Upload Chest X-Ray for Explainability Analysis</h2>
+      </div>
+    </div>
+
+    <div class="upload-row">
+      <div class="drop" id="dropZone">
+        <div class="drop-inner" id="dropContent">
+          <span class="drop-emoji">🫁</span>
+          <p class="drop-title">Drop X-Ray here</p>
+          <p class="drop-sub">PNG · JPG · JPEG</p>
+        </div>
+        <img id="previewImg"
+             class="preview-img"
+             style="display:none"
+             alt="preview"/>
+      </div>
+
+      <div class="controls">
+        <span class="ctrl-lbl">View mode</span>
+        <div class="mode-btns">
+          <button class="mode-btn active" id="modeOverlay"
+                  onclick="setMode('overlay')">
+            🎨 Heatmap Overlay
+          </button>
+          <button class="mode-btn" id="modeSplit"
+                  onclick="setMode('split')">
+            ↔️ Side by Side
+          </button>
+          <button class="mode-btn" id="modeHeatmap"
+                  onclick="setMode('heatmap')">
+            🔥 Pure Heatmap
+          </button>
+        </div>
+
+        <button class="run-btn" id="runBtn" disabled
+                onclick="runGradCAM()">
+          🧠 Generate Heatmap
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-state" id="loadingDiv">
+    <div class="rings"></div>
+    <p class="loading-msg">Computing GradCAM...</p>
+    <p class="loading-sub">Running backward pass through ResNet-18</p>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="resultsDiv">
+
+    <!-- Prediction -->
+    <div class="verdict-row">
+      <div class="verdict-card" id="verdictCard">
+        <span class="verdict-icon" id="verdictIcon">✅</span>
+        <div class="verdict-label" id="verdictLabel">Normal</div>
+        <div class="verdict-conf" id="verdictConf">
+          Confidence: —
+        </div>
+      </div>
+      <div class="stats-card">
+        <div class="stats-title">🔬 Activation Statistics</div>
+        <div class="stat-row">
+          <span class="stat-key">Max activation</span>
+          <span class="stat-val" id="statMax">—</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-key">Mean activation</span>
+          <span class="stat-val" id="statMean">—</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-key">Hot region</span>
+          <span class="stat-val" id="statHot">—</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-key">Focus area</span>
+          <span class="stat-val" id="statFocus">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Image comparison -->
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-color"
+             style="background:linear-gradient(90deg,#00008b,#0000ff,#00ffff,#ffff00,#ff0000)">
+        </div>
+        Cold (low attention) → Hot (high attention)
+      </div>
+    </div>
+
+    <div class="img-grid">
+      <div class="img-card">
+        <div class="img-card-head">
+          <div class="img-dot" style="background:#60a5fa"></div>
+          <div>
+            <div class="img-card-title">Original X-Ray</div>
+            <div class="img-card-sub">Input image</div>
+          </div>
+        </div>
+        <div class="img-wrap">
+          <img id="imgOriginal" src="" alt="Original X-ray"/>
+        </div>
+      </div>
+
+      <div class="img-card" id="centerCard">
+        <div class="img-card-head">
+          <div class="img-dot" style="background:#a78bfa"></div>
+          <div>
+            <div class="img-card-title" id="centerTitle">
+              GradCAM Overlay
+            </div>
+            <div class="img-card-sub">Red = high attention</div>
+          </div>
+        </div>
+        <div class="img-wrap">
+          <img id="imgCenter" src="" alt="GradCAM visualization"/>
+        </div>
+      </div>
+
+      <div class="img-card">
+        <div class="img-card-head">
+          <div class="img-dot" style="background:#f87171"></div>
+          <div>
+            <div class="img-card-title">Pure Heatmap</div>
+            <div class="img-card-sub">Activation intensity</div>
+          </div>
+        </div>
+        <div class="img-wrap">
+          <img id="imgHeatmap" src="" alt="Pure heatmap"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Explanation -->
+    <div class="explain-box">
+      <div class="explain-title">
+        🧠 What is GradCAM and what does this show?
+      </div>
+      <div class="explain-grid">
+        <div class="explain-item">
+          <div class="explain-item-title">What is GradCAM?</div>
+          <div class="explain-item-text">
+            Gradient-weighted Class Activation Mapping (GradCAM)
+            uses the gradients flowing into the last convolutional
+            layer to highlight which image regions most influenced
+            the prediction.
+          </div>
+        </div>
+        <div class="explain-item">
+          <div class="explain-item-title">How to read the heatmap</div>
+          <div class="explain-item-text">
+            Red/yellow regions = high attention (model focused here).
+            Blue/purple regions = low attention.
+            For pneumonia, expect attention in the lung fields
+            where infiltrates appear.
+          </div>
+        </div>
+        <div class="explain-item">
+          <div class="explain-item-title">Why this matters</div>
+          <div class="explain-item-text">
+            Explainability proves the model learned medically
+            relevant features — not shortcuts. Radiologists can
+            verify the model is looking at the right regions
+            before trusting its diagnosis.
+          </div>
+        </div>
+        <div class="explain-item">
+          <div class="explain-item-title">FHE + GradCAM</div>
+          <div class="explain-item-text">
+            The GradCAM runs on the server with the full model.
+            In SecureLens, only the final linear head runs on
+            encrypted data. GradCAM runs as a separate
+            explainability step on demand.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /results -->
+
+</div>
+
+<input type="file" id="fileInput"
+       accept=".png,.jpg,.jpeg" hidden/>
+
+<script>
+let selectedFile = null;
+let currentMode  = 'overlay';
+let currentData  = null;
+
+const dropZone  = document.getElementById('dropZone');
+const dropCont  = document.getElementById('dropContent');
+const previewImg= document.getElementById('previewImg');
+const fileInput = document.getElementById('fileInput');
+const runBtn    = document.getElementById('runBtn');
+
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => {
+  if(e.target.files[0]) handleFile(e.target.files[0]);
+});
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault(); dropZone.classList.add('over');
+});
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('over');
+});
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('over');
+  if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+function handleFile(f) {
+  if(!['image/png','image/jpeg','image/jpg'].includes(f.type)){
+    alert('Use PNG or JPEG.'); return;
+  }
+  selectedFile = f;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    previewImg.src = ev.target.result;
+    previewImg.style.display = 'block';
+    dropCont.style.display   = 'none';
+  };
+  reader.readAsDataURL(f);
+  runBtn.disabled = false;
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  ['modeOverlay','modeSplit','modeHeatmap'].forEach(id => {
+    document.getElementById(id).classList.remove('active');
+  });
+  const map = {
+    overlay:'modeOverlay', split:'modeSplit', heatmap:'modeHeatmap'
+  };
+  document.getElementById(map[mode]).classList.add('active');
+  if(currentData) applyMode(currentData);
+}
+
+function applyMode(data) {
+  const center    = document.getElementById('imgCenter');
+  const centerTtl = document.getElementById('centerTitle');
+  if(currentMode === 'overlay') {
+    center.src      = 'data:image/png;base64,'+data.overlay_b64;
+    centerTtl.textContent = 'GradCAM Overlay';
+  } else if(currentMode === 'heatmap') {
+    center.src      = 'data:image/png;base64,'+data.heatmap_b64;
+    centerTtl.textContent = 'Pure Heatmap';
+  } else {
+    center.src      = 'data:image/png;base64,'+data.overlay_b64;
+    centerTtl.textContent = 'GradCAM Overlay';
+  }
+}
+
+async function runGradCAM() {
+  if(!selectedFile) return;
+  runBtn.disabled = true;
+  runBtn.textContent = '⏳ Computing...';
+
+  document.getElementById('loadingDiv').classList.add('show');
+  document.getElementById('resultsDiv').classList.remove('show');
+
+  const fd = new FormData();
+  fd.append('image', selectedFile);
+
+  try {
+    const resp = await fetch('/api/gradcam', {method:'POST', body:fd});
+    const data = await resp.json();
+    if(data.error) throw new Error(data.error);
+
+    currentData = data;
+    renderResults(data);
+
+  } catch(err) {
+    alert('GradCAM error: ' + err.message);
+  }
+
+  document.getElementById('loadingDiv').classList.remove('show');
+  runBtn.disabled    = false;
+  runBtn.textContent = '🧠 Generate Heatmap';
+}
+
+function renderResults(data) {
+  // Verdict
+  const isPneu = data.prediction === 'Pneumonia';
+  const vCard  = document.getElementById('verdictCard');
+  vCard.className = 'verdict-card '+(isPneu?'pneumonia':'normal');
+  document.getElementById('verdictIcon').textContent =
+    isPneu ? '⚠️' : '✅';
+  document.getElementById('verdictLabel').textContent =
+    data.prediction;
+  document.getElementById('verdictConf').textContent =
+    `Confidence: ${data.confidence}%`;
+
+  // Stats
+  const cs = data.cam_stats || {};
+  document.getElementById('statMax').textContent  =
+    cs.max_activation || '—';
+  document.getElementById('statMean').textContent =
+    cs.mean_activation || '—';
+  document.getElementById('statHot').textContent  =
+    (cs.hot_region_pct || '—') + '%';
+  document.getElementById('statFocus').textContent=
+    cs.focus || '—';
+
+  // Images
+  document.getElementById('imgOriginal').src =
+    'data:image/png;base64,' + data.original_b64;
+  document.getElementById('imgHeatmap').src  =
+    'data:image/png;base64,' + data.heatmap_b64;
+
+  applyMode(data);
+
+  document.getElementById('resultsDiv').classList.add('show');
+
+  // Smooth scroll to results
+  setTimeout(() => {
+    document.getElementById('resultsDiv')
+      .scrollIntoView({behavior:'smooth', block:'start'});
+  }, 100);
+}
+</script>
+</body>
+</html>

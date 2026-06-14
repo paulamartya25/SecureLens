@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SecureLens — FHE Attack Demo</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <style>
+    .attack-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin:1.5rem 0}
+    .attack-col{background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;padding:1.25rem}
+    .attack-col.original{border-color:#2b6cb0}
+    .attack-col.danger{border-color:#9b2c2c}
+    .attack-col.success{border-color:#276749}
+    .img-box{width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#0d1117;margin-bottom:0.75rem;display:flex;align-items:center;justify-content:center}
+    .img-box img{width:100%;height:100%;object-fit:contain}
+    .verdict-sm{text-align:center;padding:0.75rem;border-radius:8px;margin-bottom:0.5rem}
+    .verdict-sm.normal{background:#0d2e1a;border:1px solid #276749}
+    .verdict-sm.pneumonia{background:#2d1515;border:1px solid #9b2c2c}
+    .verdict-sm.unknown{background:#1a1f2e;border:1px solid #4a5568}
+    .attack-btn{padding:8px 14px;border-radius:8px;border:1px solid #4a5568;background:#2d3748;color:#e2e8f0;cursor:pointer;font-size:12px;transition:all 0.2s;width:100%;margin-bottom:6px}
+    .attack-btn:hover{background:#4a5568}
+    .attack-btn.active{background:#2b6cb0;border-color:#2b6cb0;color:white}
+    .run-btn{width:100%;padding:14px;background:#2b6cb0;color:white;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:background 0.2s;margin:1rem 0}
+    .run-btn:hover:not(:disabled){background:#3182ce}
+    .run-btn:disabled{background:#2d3748;color:#4a5568;cursor:not-allowed}
+    .upload-zone{border:2px dashed #4a5568;border-radius:10px;padding:1.5rem;text-align:center;cursor:pointer;transition:all 0.3s;margin-bottom:1rem}
+    .upload-zone:hover,.upload-zone.has-file{border-color:#63b3ed;background:#0d2037}
+    .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px}
+    .bar-track{flex:1;height:8px;background:#2d3748;border-radius:99px;overflow:hidden}
+    .bar-fill{height:100%;border-radius:99px;transition:width 0.6s ease}
+    .sig-box{padding:1.25rem;border-radius:10px;margin-top:1rem;border:1px solid}
+    .sig-box.protected{background:#0d2037;border-color:#1a3a5c}
+    .sig-box.danger{background:#2d1515;border-color:#9b2c2c}
+    .step-indicator{display:flex;gap:4px;margin-bottom:1rem;flex-wrap:wrap}
+    .step-dot{padding:4px 10px;border-radius:99px;font-size:11px;background:#2d3748;color:#718096;border:1px solid #4a5568}
+    .step-dot.active{background:#2b6cb0;color:white;border-color:#2b6cb0}
+    .step-dot.done{background:#276749;color:white;border-color:#276749}
+    .step-dot.warn{background:#9b2c2c;color:white;border-color:#9b2c2c}
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <span class="logo-icon">⚔️</span>
+      <div><h1>SecureLens</h1><p>FHE Attack Significance Demo</p></div>
+    </div>
+    <a href="/" style="color:#63b3ed;text-decoration:none;font-size:0.9rem">← Back to Demo</a>
+  </div>
+</header>
+
+<main style="max-width:1100px;margin:2rem auto;padding:0 2rem">
+
+  <div style="background:#1a2240;border:1px solid #2d4a7a;border-radius:12px;padding:1.25rem;margin-bottom:1.5rem">
+    <h2 style="color:#63b3ed;font-size:1rem;margin-bottom:0.5rem">What this demo proves</h2>
+    <p style="color:#a0aec0;font-size:13px;line-height:1.7;margin:0">
+      An attacker intercepts your X-ray image during transmission.
+      <strong style="color:#fc8181">Without FHE</strong> — the attacker corrupts the image and the server diagnoses from corrupted data → <strong style="color:#fc8181">wrong diagnosis</strong>.
+      <strong style="color:#68d391">With FHE</strong> — the image is encrypted before transmission, attacker only sees ciphertext → <strong style="color:#68d391">correct diagnosis preserved</strong>.
+    </p>
+  </div>
+
+  <!-- Upload + Controls -->
+  <div style="display:grid;grid-template-columns:1fr 280px;gap:1rem;margin-bottom:1rem">
+
+    <div style="background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;padding:1.25rem">
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileIn').click()">
+        <div id="uploadText">
+          <div style="font-size:2rem;margin-bottom:0.5rem">🫁</div>
+          <p style="font-size:14px;font-weight:600;color:#e2e8f0">Upload chest X-ray</p>
+          <p style="font-size:12px;color:#718096">PNG, JPG, JPEG</p>
+        </div>
+        <img id="previewImg" style="display:none;max-height:150px;border-radius:8px" alt="preview"/>
+      </div>
+      <input type="file" id="fileIn" accept=".png,.jpg,.jpeg" style="display:none"/>
+
+      <button class="run-btn" id="runBtn" disabled onclick="runAttackDemo()">
+        ⚔️ Simulate Attack & Compare
+      </button>
+
+      <!-- Step indicator -->
+      <div class="step-indicator" id="stepIndicator">
+        <div class="step-dot" id="sd1">1. Upload</div>
+        <div class="step-dot" id="sd2">2. Original predict</div>
+        <div class="step-dot" id="sd3">3. Attack image</div>
+        <div class="step-dot" id="sd4">4. Without FHE</div>
+        <div class="step-dot" id="sd5">5. With FHE</div>
+      </div>
+    </div>
+
+    <!-- Attack controls -->
+    <div style="background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;padding:1.25rem">
+      <div style="font-size:13px;font-weight:600;color:#e2e8f0;margin-bottom:0.75rem">Attack type</div>
+
+      <button class="attack-btn active" id="btn-noise"      onclick="setAttack('noise')">🔊 Gaussian noise</button>
+      <button class="attack-btn"        id="btn-brightness" onclick="setAttack('brightness')">☀️ Brightness shift</button>
+      <button class="attack-btn"        id="btn-blackout"   onclick="setAttack('blackout')">⬛ Region blackout</button>
+      <button class="attack-btn"        id="btn-blur"       onclick="setAttack('blur')">🌫️ Blur injection</button>
+      <button class="attack-btn"        id="btn-contrast"   onclick="setAttack('contrast')">🎨 Contrast reduce</button>
+      <button class="attack-btn"        id="btn-flip"       onclick="setAttack('flip')">🔄 Image flip</button>
+
+      <div style="margin-top:1rem">
+        <div style="font-size:12px;color:#718096;margin-bottom:4px">
+          Attack intensity: <span id="lvlLabel">30%</span>
+        </div>
+        <input type="range" id="levelSlider" min="10" max="90" value="30"
+               style="width:100%" oninput="updateLevel(this.value)"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results grid -->
+  <div class="attack-grid">
+
+    <!-- Column 1: Original -->
+    <div class="attack-col original">
+      <div style="font-size:13px;font-weight:600;color:#63b3ed;margin-bottom:0.75rem;text-align:center">
+        📷 Original Image
+      </div>
+      <div class="img-box">
+        <img id="imgOriginal" src="" alt="Original X-ray"
+             style="display:none"/>
+        <span id="imgOrigPlaceholder" style="color:#4a5568;font-size:12px">Upload image</span>
+      </div>
+      <div class="verdict-sm unknown" id="verdictOrig">
+        <div style="font-size:14px;color:#718096">Awaiting upload...</div>
+      </div>
+      <div class="bar-row">
+        <span style="width:72px;color:#a0aec0">Normal</span>
+        <div class="bar-track"><div class="bar-fill" id="barOrigN" style="background:#48bb78;width:0%"></div></div>
+        <span style="width:36px;color:#e2e8f0;text-align:right" id="pctOrigN">—</span>
+      </div>
+      <div class="bar-row">
+        <span style="width:72px;color:#a0aec0">Pneumonia</span>
+        <div class="bar-track"><div class="bar-fill" id="barOrigP" style="background:#fc8181;width:0%"></div></div>
+        <span style="width:36px;color:#e2e8f0;text-align:right" id="pctOrigP">—</span>
+      </div>
+    </div>
+
+    <!-- Column 2: Without FHE (attacked) -->
+    <div class="attack-col danger">
+      <div style="font-size:13px;font-weight:600;color:#fc8181;margin-bottom:0.75rem;text-align:center">
+        ⚠️ Without FHE (attacked)
+      </div>
+      <div class="img-box">
+        <img id="imgAttacked" src="" alt="Attacked X-ray"
+             style="display:none"/>
+        <span id="imgAttPlaceholder" style="color:#4a5568;font-size:12px">Run demo</span>
+      </div>
+      <div class="verdict-sm unknown" id="verdictNoFhe">
+        <div style="font-size:14px;color:#718096">Awaiting run...</div>
+      </div>
+      <div class="bar-row">
+        <span style="width:72px;color:#a0aec0">Normal</span>
+        <div class="bar-track"><div class="bar-fill" id="barNoFheN" style="background:#48bb78;width:0%"></div></div>
+        <span style="width:36px;color:#e2e8f0;text-align:right" id="pctNoFheN">—</span>
+      </div>
+      <div class="bar-row">
+        <span style="width:72px;color:#a0aec0">Pneumonia</span>
+        <div class="bar-track"><div class="bar-fill" id="barNoFheP" style="background:#fc8181;width:0%"></div></div>
+        <span style="width:36px;color:#e2e8f0;text-align:right" id="pctNoFheP">—</span>
+      </div>
+      <div id="attackDesc" style="font-size:11px;color:#fc8181;margin-top:6px;text-align:center"></div>
+    </div>
+
+    <!-- Column 3: With FHE -->
+    <div class="attack-col success">
+      <div style="font-size:13px;font-weight:600;color:#68d391;margin-bottom:0.75rem;text-align:center">
+        🔒 With FHE (protected)
+      </div>
+      <div class="img-box" style="border:2px solid #276749">
+        <img id="imgFhe" src="" alt="FHE protected"
+             style="display:none"/>
+        <div id="imgFhePlaceholder" style="text-align:center;padding:1rem">
+          <div style="font-size:2rem;margin-bottom:0.5rem">🔐</div>
+          <div style="color:#4a5568;font-size:12px">Encrypted before<br/>transmission</div>
+        </div>
+      </div>
+      <div class="verdict-sm unknown" id="verdictFhe">
+        <div style="font-size:14px;color:#718096">Awaiting run...</div>
+      </div>
+      <div class="bar-row">
+        <span style="width:72px;color:#a0aec0">Normal</span>
+        <div class="bar-track"><div class="bar-fill" id="barFheN" style="background:#48bb78;width:0%"></div></div>
+        <span style="width:36px;color:#e2e8f0;text-align:right" id="pctFheN">—</span>
+      </div>
+      <div class="bar-row">
+        <span style="width:72px;color:#a0aec0">Pneumonia</span>
+        <div class="bar-track"><div class="bar-fill" id="barFheP" style="background:#fc8181;width:0%"></div></div>
+        <span style="width:36px;color:#e2e8f0;text-align:right" id="pctFheP">—</span>
+      </div>
+      <div style="font-size:11px;color:#68d391;margin-top:6px;text-align:center">
+        Attacker only sees 326KB ciphertext
+      </div>
+    </div>
+  </div>
+
+  <!-- Significance box -->
+  <div id="sigBox" style="display:none" class="sig-box protected">
+    <h3 id="sigTitle" style="font-size:1rem;margin-bottom:0.5rem"></h3>
+    <p id="sigMessage" style="font-size:13px;line-height:1.7;margin:0;color:#a0aec0"></p>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:1rem">
+      <div style="background:#0d1117;border-radius:6px;padding:8px;text-align:center">
+        <div style="font-size:10px;color:#718096">Original</div>
+        <div style="font-size:14px;font-weight:600;color:#e2e8f0" id="sigOrig">—</div>
+      </div>
+      <div style="background:#0d1117;border-radius:6px;padding:8px;text-align:center">
+        <div style="font-size:10px;color:#718096">Without FHE</div>
+        <div style="font-size:14px;font-weight:600" id="sigNoFhe">—</div>
+      </div>
+      <div style="background:#0d1117;border-radius:6px;padding:8px;text-align:center">
+        <div style="font-size:10px;color:#718096">With FHE</div>
+        <div style="font-size:14px;font-weight:600;color:#68d391" id="sigFhe">—</div>
+      </div>
+      <div style="background:#0d1117;border-radius:6px;padding:8px;text-align:center">
+        <div style="font-size:10px;color:#718096">Feature change</div>
+        <div style="font-size:14px;font-weight:600;color:#f6e05e" id="sigFeat">—</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer class="footer">
+  <p>SecureLens — Final Year Thesis | CKKS FHE | TenSEAL | PyTorch</p>
+</footer>
+
+<script>
+const fileIn  = document.getElementById("fileIn");
+const runBtn  = document.getElementById("runBtn");
+let selectedAttack = "noise";
+let attackLevel    = 0.3;
+
+fileIn.addEventListener("change", e => {
+  const f = e.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById("previewImg").src = ev.target.result;
+    document.getElementById("previewImg").style.display = "block";
+    document.getElementById("uploadText").style.display = "none";
+    document.getElementById("uploadZone").classList.add("has-file");
+  };
+  reader.readAsDataURL(f);
+  runBtn.disabled = false;
+  setStep(1);
+});
+
+function setAttack(type) {
+  selectedAttack = type;
+  document.querySelectorAll(".attack-btn").forEach(b =>
+    b.classList.remove("active"));
+  document.getElementById("btn-"+type).classList.add("active");
+}
+
+function updateLevel(v) {
+  attackLevel = v / 100;
+  document.getElementById("lvlLabel").textContent = v + "%";
+}
+
+function setStep(n) {
+  for(let i=1;i<=5;i++){
+    const el = document.getElementById("sd"+i);
+    el.className = "step-dot" +
+      (i < n ? " done" : i === n ? " active" : "");
+  }
+}
+
+async function runAttackDemo() {
+  const file = fileIn.files[0];
+  if(!file) return;
+
+  runBtn.disabled = true;
+  runBtn.textContent = "⏳ Running attack simulation...";
+
+  setStep(2);
+  await sleep(300);
+  setStep(3);
+  await sleep(300);
+  setStep(4);
+
+  const fd = new FormData();
+  fd.append("image",       file);
+  fd.append("attack_type", selectedAttack);
+  fd.append("attack_level", attackLevel.toString());
+
+  let data;
+  try {
+    const resp = await fetch("/api/attack-demo",
+                             {method:"POST", body:fd});
+    data = await resp.json();
+    if(data.error) throw new Error(data.error);
+  } catch(err) {
+    alert("Error: " + err.message);
+    runBtn.disabled = false;
+    runBtn.textContent = "⚔️ Simulate Attack & Compare";
+    return;
+  }
+
+  setStep(5);
+  await sleep(200);
+
+  renderOriginal(data.original);
+  await sleep(400);
+  renderNoFhe(data.without_fhe, data.attack, data.original);
+  await sleep(400);
+  renderFhe(data.with_fhe, data.original);
+  renderSignificance(data);
+
+  runBtn.disabled = false;
+  runBtn.textContent = "⚔️ Run Again";
+}
+
+function renderOriginal(o) {
+  document.getElementById("imgOriginal").src =
+    "data:image/png;base64," + o.image_b64;
+  document.getElementById("imgOriginal").style.display = "block";
+  document.getElementById("imgOrigPlaceholder").style.display = "none";
+
+  const cls = o.prediction === "Normal" ? "normal" : "pneumonia";
+  const col = o.prediction === "Normal" ? "#68d391" : "#fc8181";
+  document.getElementById("verdictOrig").className =
+    "verdict-sm " + cls;
+  document.getElementById("verdictOrig").innerHTML = `
+    <div style="font-size:16px;font-weight:700;color:${col}">
+      ${o.prediction}
+    </div>
+    <div style="font-size:12px;color:#a0aec0">
+      Confidence: ${o.confidence}%
+    </div>`;
+
+  setTimeout(() => {
+    document.getElementById("barOrigN").style.width =
+      o.normal_score + "%";
+    document.getElementById("barOrigP").style.width =
+      o.pneumonia_score + "%";
+  }, 100);
+  document.getElementById("pctOrigN").textContent =
+    o.normal_score + "%";
+  document.getElementById("pctOrigP").textContent =
+    o.pneumonia_score + "%";
+}
+
+function renderNoFhe(r, attack, orig) {
+  document.getElementById("imgAttacked").src =
+    "data:image/png;base64," + attack.image_b64;
+  document.getElementById("imgAttacked").style.display = "block";
+  document.getElementById("imgAttPlaceholder").style.display = "none";
+
+  const changed = r.diagnosis_changed;
+  const cls = r.prediction === "Normal" ? "normal" : "pneumonia";
+  const col = r.prediction === "Normal" ? "#68d391" : "#fc8181";
+  document.getElementById("verdictNoFhe").className =
+    "verdict-sm " + cls;
+  document.getElementById("verdictNoFhe").innerHTML = `
+    <div style="font-size:16px;font-weight:700;color:${col}">
+      ${r.prediction}
+      ${changed
+        ? '<span style="font-size:11px;background:#9b2c2c;padding:2px 6px;border-radius:4px;margin-left:4px;color:white">CHANGED!</span>'
+        : ''}
+    </div>
+    <div style="font-size:12px;color:#a0aec0">
+      Confidence: ${r.confidence}%
+    </div>`;
+
+  setTimeout(() => {
+    document.getElementById("barNoFheN").style.width =
+      r.normal_score + "%";
+    document.getElementById("barNoFheP").style.width =
+      r.pneumonia_score + "%";
+  }, 100);
+  document.getElementById("pctNoFheN").textContent =
+    r.normal_score + "%";
+  document.getElementById("pctNoFheP").textContent =
+    r.pneumonia_score + "%";
+  document.getElementById("attackDesc").textContent =
+    attack.description;
+}
+
+function renderFhe(r, orig) {
+  // FHE shows original image with lock overlay
+  document.getElementById("imgFhe").src =
+    "data:image/png;base64," + orig.image_b64;
+  document.getElementById("imgFhe").style.display = "block";
+  document.getElementById("imgFhePlaceholder").style.display = "none";
+
+  const cls = r.prediction === "Normal" ? "normal" : "pneumonia";
+  const col = r.prediction === "Normal" ? "#68d391" : "#fc8181";
+  document.getElementById("verdictFhe").className =
+    "verdict-sm " + cls;
+  document.getElementById("verdictFhe").innerHTML = `
+    <div style="font-size:16px;font-weight:700;color:${col}">
+      🔒 ${r.prediction}
+    </div>
+    <div style="font-size:12px;color:#a0aec0">
+      Confidence: ${r.confidence}%
+    </div>
+    <div style="font-size:11px;color:#68d391;margin-top:2px">
+      ✅ Attack had no effect
+    </div>`;
+
+  setTimeout(() => {
+    document.getElementById("barFheN").style.width =
+      r.normal_score + "%";
+    document.getElementById("barFheP").style.width =
+      r.pneumonia_score + "%";
+  }, 100);
+  document.getElementById("pctFheN").textContent =
+    r.normal_score + "%";
+  document.getElementById("pctFheP").textContent =
+    r.pneumonia_score + "%";
+}
+
+function renderSignificance(data) {
+  const box     = document.getElementById("sigBox");
+  const changed = data.significance.attack_succeeded;
+
+  box.className = "sig-box " + (changed ? "danger" : "protected");
+  box.style.display = "block";
+
+  document.getElementById("sigTitle").style.color =
+    changed ? "#fc8181" : "#68d391";
+  document.getElementById("sigTitle").textContent =
+    changed
+      ? "⚠️ FHE prevented misdiagnosis!"
+      : "✅ Both systems handled this attack — try stronger intensity";
+
+  document.getElementById("sigMessage").textContent =
+    changed
+      ? `The ${data.attack.type} attack (level ${Math.round(data.attack.level*100)}%) changed the diagnosis from "${data.original.prediction}" to "${data.without_fhe.prediction}" when transmitted without encryption. With FHE, the image features were encrypted BEFORE transmission — the attacker only received a 326KB ciphertext and could not alter the underlying data. The correct diagnosis "${data.with_fhe.prediction}" was preserved.`
+      : `The attack changed image features by ${data.attack.feat_change}% but was not strong enough to flip the diagnosis. Try increasing the attack intensity slider or switching to a different attack type to see FHE's protective effect more clearly.`;
+
+  document.getElementById("sigOrig").textContent =
+    data.original.prediction;
+  document.getElementById("sigNoFhe").textContent =
+    data.without_fhe.prediction;
+  document.getElementById("sigNoFhe").style.color =
+    changed ? "#fc8181" : "#68d391";
+  document.getElementById("sigFhe").textContent =
+    data.with_fhe.prediction;
+  document.getElementById("sigFeat").textContent =
+    data.attack.feat_change + "%";
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+setStep(0);
+</script>
+</body>
+</html>

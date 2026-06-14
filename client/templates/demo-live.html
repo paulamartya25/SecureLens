@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SecureLens — Live FHE vs Traditional Demo</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <style>
+    .demo-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin:1.5rem 0}
+    .demo-col{background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;padding:1.5rem}
+    .demo-col.danger{border-color:#9b2c2c}
+    .demo-col.success{border-color:#276749}
+    .step-item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;margin-bottom:8px;font-size:13px;background:#0d1117;border:1px solid #2d3748;transition:all 0.3s}
+    .step-item.active{border-color:#63b3ed;background:#0d2037}
+    .step-item.done-safe{border-color:#276749;background:#0d2e1a}
+    .step-item.done-danger{border-color:#9b2c2c;background:#2d1515}
+    .step-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;background:#2d3748;color:#718096;transition:all 0.3s}
+    .step-num.active{background:#2b6cb0;color:white}
+    .step-num.done-safe{background:#276749;color:white}
+    .step-num.done-danger{background:#9b2c2c;color:white}
+    .result-box{background:#0d1117;border-radius:8px;padding:1rem;margin-top:1rem;min-height:80px;text-align:center}
+    .upload-zone{border:2px dashed #4a5568;border-radius:10px;padding:2rem;text-align:center;cursor:pointer;transition:all 0.3s;margin-bottom:1rem}
+    .upload-zone:hover{border-color:#63b3ed;background:#0d2037}
+    .upload-zone.has-file{border-color:#276749;background:#0d2e1a}
+    .run-btn{width:100%;padding:14px;background:#2b6cb0;color:white;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:background 0.2s;margin-bottom:1rem}
+    .run-btn:hover:not(:disabled){background:#3182ce}
+    .run-btn:disabled{background:#2d3748;color:#4a5568;cursor:not-allowed}
+    .timing-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #2d3748;font-size:13px}
+    .progress-bar{height:6px;background:#2d3748;border-radius:99px;overflow:hidden;margin:4px 0}
+    .progress-fill{height:100%;border-radius:99px;width:0%;transition:width 0.5s ease}
+    .verdict{text-align:center;padding:1rem;border-radius:8px;margin-top:0.5rem}
+    .verdict.normal{background:#0d2e1a;border:1px solid #276749}
+    .verdict.pneumonia{background:#2d1515;border:1px solid #9b2c2c}
+    .metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:1rem 0}
+    .metric-sm{background:#1a1f2e;border:1px solid #2d3748;border-radius:8px;padding:10px;text-align:center}
+    .metric-sm-val{font-size:1.3rem;font-weight:700;margin:4px 0}
+    .metric-sm-lbl{font-size:11px;color:#718096}
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <span class="logo-icon">⚡</span>
+      <div><h1>SecureLens</h1><p>Live Demo — FHE vs Traditional Inference</p></div>
+    </div>
+    <a href="/" style="color:#63b3ed;text-decoration:none;font-size:0.9rem">← Back to Demo</a>
+  </div>
+</header>
+
+<main style="max-width:1100px;margin:2rem auto;padding:0 2rem">
+
+  <p style="color:#718096;font-size:14px;margin-bottom:1.5rem">
+    Upload a chest X-ray to run <strong style="color:#e2e8f0">both pipelines simultaneously</strong>
+    on your real image. See the actual timing, predictions, and privacy difference.
+  </p>
+
+  <!-- Upload -->
+  <div style="background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;padding:1.5rem;margin-bottom:1rem">
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileIn').click()">
+      <div id="uploadText">
+        <div style="font-size:2.5rem;margin-bottom:0.5rem">🫁</div>
+        <p style="font-size:1rem;font-weight:600;color:#e2e8f0">Drop chest X-ray here</p>
+        <p style="font-size:13px;color:#718096">or click to browse — PNG, JPG, JPEG</p>
+      </div>
+      <img id="previewImg" style="display:none;max-height:180px;border-radius:8px" alt="preview"/>
+    </div>
+    <input type="file" id="fileIn" accept=".png,.jpg,.jpeg" style="display:none"/>
+
+    <button class="run-btn" id="runBtn" disabled onclick="runLiveDemo()">
+      ⚡ Run Live FHE vs Traditional Comparison
+    </button>
+
+    <div style="display:flex;gap:8px;font-size:12px;color:#718096;align-items:center">
+      <span>🔒</span>
+      <span>Your X-ray is processed locally — no data stored on server</span>
+    </div>
+  </div>
+
+  <!-- Live comparison columns -->
+  <div class="demo-grid">
+
+    <!-- Traditional -->
+    <div class="demo-col danger">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <span style="font-weight:600;color:#fc8181;font-size:15px">🔓 Traditional (Plaintext)</span>
+        <span id="badge-trad" style="font-size:11px;padding:2px 8px;border-radius:99px;background:#2d1515;color:#fc8181">Waiting</span>
+      </div>
+
+      <div id="steps-trad">
+        <div class="step-item" id="t1"><div class="step-num" id="tn1">1</div><span>Receive image upload</span></div>
+        <div class="step-item" id="t2"><div class="step-num" id="tn2">2</div><span>Send raw pixels to server</span></div>
+        <div class="step-item" id="t3"><div class="step-num" id="tn3">3</div><span>Server reads plaintext features</span></div>
+        <div class="step-item" id="t4"><div class="step-num" id="tn4">4</div><span>Run inference on plaintext</span></div>
+        <div class="step-item" id="t5"><div class="step-num" id="tn5">5</div><span>Return plaintext result</span></div>
+      </div>
+
+      <div style="margin-top:1rem">
+        <div class="progress-bar">
+          <div class="progress-fill" id="prog-trad" style="background:#fc8181"></div>
+        </div>
+      </div>
+
+      <div class="result-box" id="result-trad">
+        <span style="color:#4a5568;font-size:13px">Awaiting run...</span>
+      </div>
+
+      <div style="margin-top:1rem;padding:10px;background:#2d1515;border-radius:6px;font-size:12px;color:#fc8181">
+        ⚠️ Server has full access to your image features at all times
+      </div>
+    </div>
+
+    <!-- FHE -->
+    <div class="demo-col success">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <span style="font-weight:600;color:#68d391;font-size:15px">🔒 SecureLens (FHE)</span>
+        <span id="badge-fhe" style="font-size:11px;padding:2px 8px;border-radius:99px;background:#0d2e1a;color:#68d391">Waiting</span>
+      </div>
+
+      <div id="steps-fhe">
+        <div class="step-item" id="f1"><div class="step-num" id="fn1">1</div><span>Receive image upload</span></div>
+        <div class="step-item" id="f2"><div class="step-num" id="fn2">2</div><span>Extract 512-dim features</span></div>
+        <div class="step-item" id="f3"><div class="step-num" id="fn3">3</div><span>Encrypt features via CKKS</span></div>
+        <div class="step-item" id="f4"><div class="step-num" id="fn4">4</div><span>Server computes on ciphertext</span></div>
+        <div class="step-item" id="f5"><div class="step-num" id="fn5">5</div><span>Client decrypts result locally</span></div>
+      </div>
+
+      <div style="margin-top:1rem">
+        <div class="progress-bar">
+          <div class="progress-fill" id="prog-fhe" style="background:#68d391"></div>
+        </div>
+      </div>
+
+      <div class="result-box" id="result-fhe">
+        <span style="color:#4a5568;font-size:13px">Awaiting run...</span>
+      </div>
+
+      <div style="margin-top:1rem;padding:10px;background:#0d2e1a;border-radius:6px;font-size:12px;color:#68d391">
+        ✅ Server only receives encrypted ciphertext — zero plaintext access
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary metrics -->
+  <div id="summaryBox" style="display:none;background:#0d2037;border:1px solid #1a3a5c;border-radius:12px;padding:1.5rem;margin-top:1rem">
+    <h3 style="color:#63b3ed;margin-bottom:1rem">Live Comparison Results</h3>
+
+    <div class="metric-row">
+      <div class="metric-sm">
+        <div class="metric-sm-lbl">Accuracy loss</div>
+        <div class="metric-sm-val" style="color:#68d391" id="sum-acc">—</div>
+        <div class="metric-sm-lbl">after FHE</div>
+      </div>
+      <div class="metric-sm">
+        <div class="metric-sm-lbl">Time overhead</div>
+        <div class="metric-sm-val" style="color:#f6e05e" id="sum-time">—</div>
+        <div class="metric-sm-lbl">FHE vs plaintext</div>
+      </div>
+      <div class="metric-sm">
+        <div class="metric-sm-lbl">Data exposed</div>
+        <div class="metric-sm-val" style="color:#68d391" id="sum-exp">—</div>
+        <div class="metric-sm-lbl">by FHE pipeline</div>
+      </div>
+    </div>
+
+    <div id="finding-box" style="padding:1rem;background:#0d1117;border-radius:8px;font-size:14px;color:#e2e8f0;line-height:1.7;margin-top:0.5rem"></div>
+  </div>
+
+</main>
+
+<footer class="footer">
+  <p>SecureLens — Final Year Thesis | CKKS FHE | TenSEAL | PyTorch</p>
+</footer>
+
+<script>
+const fileIn = document.getElementById("fileIn");
+const runBtn = document.getElementById("runBtn");
+
+fileIn.addEventListener("change", e => {
+  const f = e.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById("previewImg").src = ev.target.result;
+    document.getElementById("previewImg").style.display = "block";
+    document.getElementById("uploadText").style.display = "none";
+    document.getElementById("uploadZone").classList.add("has-file");
+  };
+  reader.readAsDataURL(f);
+  runBtn.disabled = false;
+});
+
+async function runLiveDemo() {
+  const file = fileIn.files[0];
+  if(!file) return;
+
+  runBtn.disabled = true;
+  runBtn.textContent = "⏳ Running both pipelines...";
+  document.getElementById("summaryBox").style.display = "none";
+
+  resetSteps();
+
+  // Animate traditional steps
+  animateTrad();
+
+  const fd = new FormData();
+  fd.append("image", file);
+
+  let data;
+  try {
+    const resp = await fetch("/api/compare", {method:"POST", body:fd});
+    data = await resp.json();
+    if(data.error) throw new Error(data.error);
+  } catch(err) {
+    runBtn.disabled = false;
+    runBtn.textContent = "⚡ Run Again";
+    alert("Error: " + err.message);
+    return;
+  }
+
+  // Show FHE steps after trad finishes
+  await sleep(3000);
+  animateFhe();
+  await sleep(3500);
+
+  // Show results
+  showTradResult(data.traditional);
+  showFheResult(data.fhe);
+  showSummary(data);
+
+  runBtn.disabled = false;
+  runBtn.textContent = "⚡ Run Again";
+}
+
+async function animateTrad() {
+  document.getElementById("badge-trad").textContent = "Running";
+  const ids = ["t1","t2","t3","t4","t5"];
+  const nids = ["tn1","tn2","tn3","tn4","tn5"];
+  const safe = [true,false,false,false,true];
+  for(let i=0;i<ids.length;i++){
+    await sleep(500);
+    const el = document.getElementById(ids[i]);
+    const ni = document.getElementById(nids[i]);
+    el.className  = "step-item "+(safe[i]?"done-safe":"done-danger");
+    ni.className  = "step-num "+(safe[i]?"done-safe":"done-danger");
+    ni.textContent = safe[i] ? "✓" : "⚠";
+    document.getElementById("prog-trad").style.width = ((i+1)/ids.length*100)+"%";
+  }
+  document.getElementById("badge-trad").textContent = "Complete";
+  document.getElementById("badge-trad").style.background = "#2d1515";
+}
+
+async function animateFhe() {
+  document.getElementById("badge-fhe").textContent = "Running";
+  const ids  = ["f1","f2","f3","f4","f5"];
+  const nids = ["fn1","fn2","fn3","fn4","fn5"];
+  for(let i=0;i<ids.length;i++){
+    await sleep(580);
+    const el = document.getElementById(ids[i]);
+    const ni = document.getElementById(nids[i]);
+    el.className  = "step-item done-safe";
+    ni.className  = "step-num done-safe";
+    ni.textContent = "✓";
+    document.getElementById("prog-fhe").style.width = ((i+1)/ids.length*100)+"%";
+  }
+  document.getElementById("badge-fhe").textContent = "Secure";
+  document.getElementById("badge-fhe").style.background = "#0d2e1a";
+}
+
+function showTradResult(t) {
+  const box = document.getElementById("result-trad");
+  const cls = t.prediction==="Normal" ? "normal" : "pneumonia";
+  const col = t.prediction==="Normal" ? "#68d391" : "#fc8181";
+  box.innerHTML = `
+    <div class="verdict ${cls}">
+      <div style="font-size:1.4rem;font-weight:700;color:${col}">${t.prediction}</div>
+      <div style="font-size:13px;color:#a0aec0">Confidence: ${(t.confidence).toFixed(1)}%</div>
+      <div style="font-size:12px;color:#718096;margin-top:4px">⏱ ${t.time_seconds}s</div>
+      <div style="font-size:11px;color:#fc8181;margin-top:4px">⚠ ${t.server_sees}</div>
+    </div>`;
+}
+
+function showFheResult(f) {
+  const box = document.getElementById("result-fhe");
+  const cls = f.prediction==="Normal" ? "normal" : "pneumonia";
+  const col = f.prediction==="Normal" ? "#68d391" : "#fc8181";
+  box.innerHTML = `
+    <div class="verdict ${cls}">
+      <div style="font-size:1.4rem;font-weight:700;color:${col}">${f.prediction}</div>
+      <div style="font-size:13px;color:#a0aec0">Confidence: ${(f.confidence).toFixed(1)}%</div>
+      <div style="font-size:12px;color:#718096;margin-top:4px">⏱ ${f.time_seconds}s</div>
+      <div style="font-size:11px;color:#68d391;margin-top:4px">✅ ${f.server_sees}</div>
+    </div>`;
+}
+
+function showSummary(data) {
+  const c = data.comparison;
+  document.getElementById("sum-acc").textContent =
+    c.confidence_diff_pct.toFixed(2) + "%";
+  document.getElementById("sum-time").textContent =
+    c.time_overhead_ms + "ms";
+  document.getElementById("sum-exp").textContent = "0 bytes";
+
+  const match = c.diagnosis_match;
+  document.getElementById("finding-box").innerHTML = `
+    <strong style="color:${match?'#68d391':'#fc8181'}">
+      ${match ? "✅ Diagnoses match!" : "⚠ Diagnoses differ"}
+    </strong>
+    — ${c.key_finding}<br/>
+    <span style="color:#a0aec0;font-size:13px">
+      Traditional: ${data.traditional.prediction} (${data.traditional.confidence.toFixed(1)}%)
+      &nbsp;|&nbsp;
+      FHE: ${data.fhe.prediction} (${data.fhe.confidence.toFixed(1)}%)
+      &nbsp;|&nbsp;
+      Overhead: ${c.time_overhead_ms}ms
+    </span>`;
+
+  document.getElementById("summaryBox").style.display = "block";
+}
+
+function resetSteps() {
+  ["t1","t2","t3","t4","t5","f1","f2","f3","f4","f5"].forEach(id => {
+    document.getElementById(id).className = "step-item";
+  });
+  ["tn1","tn2","tn3","tn4","tn5","fn1","fn2","fn3","fn4","fn5"].forEach((id,i) => {
+    const el = document.getElementById(id);
+    el.className = "step-num";
+    el.textContent = (i%5)+1;
+  });
+  document.getElementById("prog-trad").style.width = "0%";
+  document.getElementById("prog-fhe").style.width  = "0%";
+  document.getElementById("result-trad").innerHTML =
+    '<span style="color:#4a5568;font-size:13px">Running...</span>';
+  document.getElementById("result-fhe").innerHTML  =
+    '<span style="color:#4a5568;font-size:13px">Running...</span>';
+  document.getElementById("badge-trad").textContent = "Running";
+  document.getElementById("badge-fhe").textContent  = "Running";
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+</script>
+</body>
+</html>

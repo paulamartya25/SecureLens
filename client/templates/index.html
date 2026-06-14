@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SecureLens — Privacy-Preserving Medical Diagnostics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:      #050A14;
+      --bg1:     #0A1628;
+      --bg2:     #111D35;
+      --teal:    #00D4FF;
+      --emerald: #00FF88;
+      --purple:  #7B61FF;
+      --red:     #FF4D6D;
+      --yellow:  #FFD166;
+      --white:   #F0F4FF;
+      --muted:   #4A6080;
+      --border:  rgba(0,212,255,0.12);
+      --glow-t:  rgba(0,212,255,0.12);
+      --glow-e:  rgba(0,255,136,0.10);
+      --font:    'Inter', system-ui, sans-serif;
+      --mono:    'Space Mono', monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--white);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Canvas BG ───────────────────────────────────────────── */
+    #bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    .page { position: relative; z-index: 1; }
+
+    /* ── Header ──────────────────────────────────────────────── */
+    .header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2.5rem; height: 64px;
+      background: rgba(5,10,20,0.88);
+      backdrop-filter: blur(24px) saturate(160%);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .logo-mark {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: rgba(0,212,255,0.15); border: 1px solid var(--teal);
+      display: flex; align-items: center; justify-content: center; font-size: 15px;
+      box-shadow: 0 0 12px rgba(0,212,255,0.2);
+    }
+    .logo-name {
+      font-size: 1.05rem; font-weight: 800; letter-spacing: -0.03em;
+      background: linear-gradient(90deg, var(--teal), var(--emerald));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .nav { display: flex; align-items: center; gap: 4px; }
+    .nav a {
+      padding: 5px 12px; border-radius: 7px; font-size: 0.78rem; font-weight: 500;
+      color: var(--muted); text-decoration: none; transition: all 0.18s;
+    }
+    .nav a:hover { color: var(--teal); background: var(--glow-t); }
+    .pills { display: flex; gap: 6px; }
+    .pill {
+      padding: 3px 9px; border-radius: 99px; font-size: 0.65rem;
+      font-weight: 700; font-family: var(--mono); letter-spacing: 0.04em;
+    }
+    .pill-t { background: rgba(0,212,255,0.1); color: var(--teal); border: 1px solid rgba(0,212,255,0.25); }
+    .pill-e { background: rgba(0,255,136,0.1); color: var(--emerald); border: 1px solid rgba(0,255,136,0.25); }
+    .pill-p { background: rgba(123,97,255,0.1); color: var(--purple); border: 1px solid rgba(123,97,255,0.25); }
+
+    /* ── Hero ────────────────────────────────────────────────── */
+    .hero {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 96px 2.5rem 4rem; position: relative;
+    }
+    .hero-inner {
+      max-width: 1200px; width: 100%;
+      display: grid; grid-template-columns: 1fr 1.1fr; gap: 4rem; align-items: start;
+    }
+    @media (max-width: 960px) { .hero-inner { grid-template-columns: 1fr; } }
+
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px; margin-bottom: 1.5rem;
+      font-size: 0.68rem; font-weight: 700; font-family: var(--mono);
+      letter-spacing: 0.14em; text-transform: uppercase; color: var(--teal);
+    }
+    .eyebrow::before { content:''; width: 20px; height: 1px; background: var(--teal); opacity: 0.5; }
+
+    .hero-h1 {
+      font-size: clamp(2.6rem, 4.5vw, 4rem); font-weight: 900; line-height: 1.0;
+      letter-spacing: -0.04em; margin-bottom: 1.4rem;
+    }
+    .hero-h1 .l1 { display: block; color: var(--white); }
+    .hero-h1 .l2 {
+      display: block;
+      background: linear-gradient(90deg, var(--teal) 0%, var(--emerald) 50%, var(--teal) 100%);
+      background-size: 200% 100%; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; animation: shimmer 4s linear infinite;
+    }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    .hero-sub { font-size: 0.95rem; color: var(--muted); line-height: 1.8; margin-bottom: 2rem; max-width: 440px; }
+
+    .hero-stats { display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: 2.5rem; }
+    .stat-val {
+      font-size: 1.7rem; font-weight: 800; font-family: var(--mono);
+      letter-spacing: -0.04em; display: block;
+    }
+    .stat-lbl { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+    .stat-sep { width: 1px; background: var(--border); align-self: stretch; }
+
+    .cta-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn-pri {
+      padding: 12px 22px; border-radius: 10px; font-size: 0.88rem; font-weight: 700;
+      background: linear-gradient(135deg, var(--teal), var(--emerald));
+      color: #050A14; border: none; cursor: pointer; transition: all 0.2s;
+      box-shadow: 0 0 24px rgba(0,212,255,0.22);
+    }
+    .btn-pri:hover { transform: translateY(-2px); box-shadow: 0 0 36px rgba(0,212,255,0.38); }
+    .btn-ghost {
+      padding: 12px 22px; border-radius: 10px; font-size: 0.88rem; font-weight: 600;
+      background: transparent; color: var(--white); border: 1px solid var(--border);
+      cursor: pointer; transition: all 0.2s; text-decoration: none;
+      display: inline-flex; align-items: center;
+    }
+    .btn-ghost:hover { border-color: var(--teal); color: var(--teal); background: var(--glow-t); }
+
+    /* ── Upload Card ─────────────────────────────────────────── */
+    .upload-card {
+      background: var(--bg1); border: 1px solid var(--border); border-radius: 20px;
+      padding: 1.5rem; position: relative; overflow: hidden;
+      box-shadow: 0 0 60px rgba(0,212,255,0.05), 0 32px 80px rgba(0,0,0,0.4);
+    }
+    .upload-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--teal), transparent); opacity: 0.5;
+    }
+
+    .card-hdr {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);
+    }
+    .card-ico {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+    }
+    .ico-t { background: rgba(0,212,255,0.12); border: 1px solid rgba(0,212,255,0.2); }
+    .ico-e { background: rgba(0,255,136,0.12); border: 1px solid rgba(0,255,136,0.2); }
+    .ico-p { background: rgba(123,97,255,0.12); border: 1px solid rgba(123,97,255,0.2); }
+    .ico-y { background: rgba(255,209,102,0.12); border: 1px solid rgba(255,209,102,0.2); }
+    .card-ttl { font-size: 0.85rem; font-weight: 600; }
+    .card-sub-txt { font-size: 0.68rem; color: var(--muted); margin-top: 1px; }
+
+    /* Drop zone */
+    .drop {
+      border: 1.5px dashed rgba(0,212,255,0.18); border-radius: 14px;
+      min-height: 180px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.25s; position: relative; overflow: hidden;
+      background: rgba(0,212,255,0.02); margin-bottom: 1rem;
+    }
+    .drop:hover, .drop.over { border-color: rgba(0,212,255,0.45); background: rgba(0,212,255,0.05); }
+    .drop.has-file { border-color: rgba(0,255,136,0.35); }
+    #enc-canvas { position: absolute; inset: 0; z-index: 2; pointer-events: none; border-radius: 14px; opacity: 0; transition: opacity 0.4s; }
+    #enc-canvas.on { opacity: 1; }
+    .drop-inner { text-align: center; padding: 1.5rem; z-index: 1; }
+    .drop-emoji { font-size: 2.8rem; display: block; margin-bottom: 0.6rem; animation: breathe 3s ease-in-out infinite; }
+    @keyframes breathe { 0%,100%{transform:translateY(0);filter:drop-shadow(0 0 8px rgba(0,212,255,0.3))} 50%{transform:translateY(-5px);filter:drop-shadow(0 0 16px rgba(0,212,255,0.5))} }
+    .drop-t { font-size: 0.88rem; font-weight: 600; }
+    .drop-s { font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
+    .prev { width: 100%; height: 180px; object-fit: contain; border-radius: 10px; position: relative; z-index: 1; }
+
+    .btn-row { display: flex; gap: 8px; margin-bottom: 1rem; }
+    .cb {
+      flex: 1; padding: 10px; border-radius: 9px; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; border: none; transition: all 0.2s; font-family: var(--font);
+    }
+    .cb-sec { background: rgba(255,255,255,0.05); color: var(--white); border: 1px solid var(--border); }
+    .cb-sec:hover { background: rgba(255,255,255,0.08); }
+    .cb-pri { background: linear-gradient(135deg,var(--teal),var(--emerald)); color:#050A14; box-shadow:0 0 16px rgba(0,212,255,0.18); }
+    .cb-pri:hover:not(:disabled) { box-shadow:0 0 28px rgba(0,212,255,0.36); transform:translateY(-1px); }
+    .cb-pri:disabled { background:var(--bg2); color:var(--muted); box-shadow:none; cursor:not-allowed; }
+
+    .priv { display:flex; gap:8px; align-items:flex-start; background:rgba(0,212,255,0.04); border:1px solid rgba(0,212,255,0.1); border-radius:9px; padding:9px 12px; font-size:0.68rem; color:var(--teal); line-height:1.6; font-family:var(--mono); }
+
+    /* ── Pipeline ────────────────────────────────────────────── */
+    .pipe-wrap { max-width:1200px; margin:0 auto; padding:0 2.5rem 4rem; display:flex; gap:0; }
+    .pn {
+      flex:1; background:var(--bg1); border:1px solid var(--border);
+      padding:1.1rem 1rem; position:relative; transition:all 0.3s;
+    }
+    .pn:first-child { border-radius:14px 0 0 14px; }
+    .pn:last-child  { border-radius:0 14px 14px 0; }
+    .pn:not(:last-child)::after {
+      content:'›'; position:absolute; right:-11px; top:50%; transform:translateY(-50%);
+      z-index:2; color:var(--muted); font-size:1.2rem;
+    }
+    .pn.active { border-color:rgba(0,212,255,0.4); background:rgba(0,212,255,0.05); }
+    .pn.done   { border-color:rgba(0,255,136,0.3); background:rgba(0,255,136,0.04); }
+    .pn-num { font-family:var(--mono); font-size:0.6rem; color:var(--muted); margin-bottom:4px; display:block; }
+    .pn.active .pn-num { color:var(--teal); }
+    .pn.done   .pn-num { color:var(--emerald); }
+    .pn-lbl { font-size:0.78rem; font-weight:600; color:var(--white); }
+    .pn.active .pn-lbl { color:var(--teal); }
+    .pn.done   .pn-lbl { color:var(--emerald); }
+    .pn-det { font-size:0.62rem; color:var(--muted); margin-top:3px; }
+
+    /* ── Main result grid ────────────────────────────────────── */
+    .main-wrap { max-width:1200px; margin:0 auto; padding:0 2.5rem 4rem; }
+    .result-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; }
+    @media(max-width:768px){ .result-grid{grid-template-columns:1fr;} }
+
+    /* Glass card */
+    .glass {
+      background:var(--bg1); border:1px solid var(--border); border-radius:18px;
+      padding:1.5rem; position:relative; overflow:hidden; transition:border-color 0.3s;
+    }
+    .glass::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:1px;
+      background:linear-gradient(90deg,transparent,var(--teal),transparent);
+      opacity:0; transition:opacity 0.3s;
+    }
+    .glass:hover { border-color:rgba(0,212,255,0.22); }
+    .glass:hover::before { opacity:0.5; }
+
+    /* Idle */
+    .idle { text-align:center; padding:2.5rem 1rem; color:var(--muted); }
+    .idle-ico { font-size:3rem; opacity:0.2; display:block; margin-bottom:0.75rem; }
+
+    /* Loading */
+    .loading { text-align:center; padding:2rem 1rem; display:none; }
+    .loading.on { display:block; }
+    .rings { width:52px; height:52px; margin:0 auto 1.25rem; position:relative; }
+    .rings::before,.rings::after { content:''; position:absolute; inset:0; border-radius:50%; border:2px solid transparent; }
+    .rings::before { border-top-color:var(--teal); border-right-color:rgba(0,212,255,0.2); animation:spin 0.9s linear infinite; }
+    .rings::after { inset:7px; border-bottom-color:var(--emerald); border-left-color:rgba(0,255,136,0.2); animation:spin 1.4s linear infinite reverse; }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .load-msg { font-size:0.78rem; color:var(--teal); font-weight:600; font-family:var(--mono); }
+    .ls { display:flex; align-items:center; gap:8px; padding:3px 0; font-size:0.72rem; color:var(--muted); font-family:var(--mono); transition:color 0.3s; }
+    .ls::before { content:'○'; font-size:0.58rem; flex-shrink:0; }
+    .ls.done { color:var(--emerald); } .ls.done::before { content:'●'; }
+    .ls.active { color:var(--teal); font-weight:700; } .ls.active::before { content:'◉'; animation:blink 0.8s infinite; }
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+
+    /* Result */
+    .res { display:none; }
+    .res.on { display:block; }
+
+    /* Verdict */
+    .verdict {
+      border-radius:14px; padding:1.5rem; text-align:center; margin-bottom:1.1rem;
+      border:1px solid; position:relative; overflow:hidden;
+    }
+    .verdict-glow { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 0%,var(--vg),transparent 70%); }
+    .verdict.normal   { background:rgba(0,255,136,0.04); border-color:rgba(0,255,136,0.2); --vg:rgba(0,255,136,0.07); }
+    .verdict.pneumonia{ background:rgba(255,77,109,0.05); border-color:rgba(255,77,109,0.2); --vg:rgba(255,77,109,0.07); }
+    .v-ico  { font-size:2.4rem; display:block; margin-bottom:6px; position:relative; }
+    .v-lbl  { font-size:1.9rem; font-weight:900; letter-spacing:-0.04em; margin-bottom:4px; position:relative; }
+    .verdict.normal    .v-lbl { color:var(--emerald); }
+    .verdict.pneumonia .v-lbl { color:var(--red); }
+    .v-conf { font-size:0.75rem; color:var(--muted); font-family:var(--mono); position:relative; }
+
+    /* Bars */
+    .bars { margin-bottom:1.1rem; }
+    .br { display:flex; align-items:center; gap:10px; margin-bottom:7px; }
+    .br-lbl { font-size:0.72rem; width:68px; color:var(--muted); font-family:var(--mono); }
+    .br-track { flex:1; height:5px; border-radius:99px; background:rgba(255,255,255,0.05); overflow:hidden; }
+    .br-fill { height:100%; border-radius:99px; width:0%; transition:width 0.9s cubic-bezier(.4,0,.2,1); }
+    .fill-n { background:linear-gradient(90deg,rgba(0,255,136,0.3),var(--emerald)); }
+    .fill-p { background:linear-gradient(90deg,rgba(255,77,109,0.3),var(--red)); }
+    .br-pct { font-size:0.72rem; width:40px; text-align:right; color:var(--white); font-family:var(--mono); }
+
+    /* Enc box */
+    .enc-box { background:rgba(0,212,255,0.04); border:1px solid rgba(0,212,255,0.1); border-radius:12px; padding:1rem; margin-bottom:1rem; }
+    .box-ttl { font-size:0.62rem; font-weight:700; font-family:var(--mono); letter-spacing:0.1em; text-transform:uppercase; color:var(--teal); margin-bottom:0.7rem; }
+    .enc-kv-grid { display:grid; grid-template-columns:1fr 1fr; gap:5px 1rem; }
+    .ekv { font-size:0.65rem; font-family:var(--mono); }
+    .ek  { color:var(--muted); } .ev { color:var(--white); font-weight:700; }
+
+    /* Trace */
+    .trace-box { background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:12px; padding:1rem; margin-bottom:1rem; }
+    .trace-list { list-style:none; }
+    .trace-list li { font-size:0.67rem; color:var(--muted); font-family:var(--mono); padding:2px 0; line-height:1.5; }
+    .trace-list li::before { content:'> '; color:var(--emerald); }
+
+    /* Reset */
+    .rst { width:100%; padding:10px; border-radius:9px; font-size:0.8rem; font-weight:600; background:rgba(255,255,255,0.04); color:var(--white); border:1px solid var(--border); cursor:pointer; transition:all 0.2s; font-family:var(--font); margin-top:4px; }
+    .rst:hover { background:rgba(255,255,255,0.07); }
+
+    /* ── GradCAM section ─────────────────────────────────────── */
+    .gradcam-section {
+      max-width:1200px; margin:0 auto; padding:0 2.5rem 4rem;
+      display:none;
+    }
+    .gradcam-section.on { display:block; }
+
+    .gradcam-header {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;
+    }
+    .gradcam-title-block h2 { font-size:1.4rem; font-weight:800; letter-spacing:-0.03em; }
+    .gradcam-title-block p  { font-size:0.78rem; color:var(--muted); margin-top:4px; }
+    .gradcam-accent { color:var(--yellow); }
+
+    .mode-tabs { display:flex; gap:6px; }
+    .mode-tab {
+      padding:6px 14px; border-radius:8px; font-size:0.75rem; font-weight:600;
+      cursor:pointer; border:1px solid var(--border); background:transparent;
+      color:var(--muted); transition:all 0.2s; font-family:var(--font);
+    }
+    .mode-tab.active { background:rgba(0,212,255,0.12); color:var(--teal); border-color:rgba(0,212,255,0.3); }
+    .mode-tab:hover:not(.active) { color:var(--white); border-color:rgba(255,255,255,0.2); }
+
+    /* Three-image grid */
+    .img-trio {
+      display:grid; grid-template-columns:repeat(3,1fr); gap:1.25rem;
+      margin-bottom:1.25rem;
+    }
+    @media(max-width:680px){ .img-trio{grid-template-columns:1fr;} }
+
+    .img-card {
+      background:var(--bg1); border:1px solid var(--border); border-radius:16px;
+      overflow:hidden; transition:all 0.25s;
+    }
+    .img-card:hover { border-color:rgba(0,212,255,0.25); transform:translateY(-3px); box-shadow:0 16px 40px rgba(0,0,0,0.3); }
+    .img-card-hdr {
+      display:flex; align-items:center; gap:8px;
+      padding:0.875rem 1rem; border-bottom:1px solid var(--border);
+    }
+    .img-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .img-card-ttl { font-size:0.78rem; font-weight:600; }
+    .img-card-sub { font-size:0.62rem; color:var(--muted); margin-top:1px; }
+    .img-wrap {
+      position:relative; background:#000; aspect-ratio:1/1; overflow:hidden;
+    }
+    .img-wrap img { width:100%; height:100%; object-fit:contain; transition:opacity 0.3s; }
+    .img-placeholder {
+      width:100%; height:100%; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:8px; opacity:0.25;
+    }
+    .img-placeholder span { font-size:2rem; }
+    .img-placeholder p { font-size:0.7rem; font-family:var(--mono); color:var(--muted); }
+
+    /* GradCAM loading */
+    .gcam-loading {
+      display:none; text-align:center; padding:3rem;
+      background:var(--bg1); border:1px solid var(--border);
+      border-radius:16px; margin-bottom:1.25rem;
+    }
+    .gcam-loading.on { display:block; }
+
+    /* Stats row */
+    .gcam-stats {
+      display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:1.25rem;
+    }
+    @media(max-width:600px){ .gcam-stats{grid-template-columns:1fr 1fr;} }
+    .gcam-stat {
+      background:var(--bg1); border:1px solid var(--border); border-radius:12px;
+      padding:1rem; text-align:center;
+    }
+    .gcam-stat-lbl { font-size:0.62rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; font-family:var(--mono); }
+    .gcam-stat-val { font-size:1.3rem; font-weight:800; font-family:var(--mono); }
+
+    /* Legend */
+    .heatmap-legend {
+      display:flex; align-items:center; gap:12px;
+      padding:10px 14px; background:var(--bg1); border:1px solid var(--border);
+      border-radius:10px; margin-bottom:1.25rem; flex-wrap:wrap;
+    }
+    .legend-bar {
+      height:8px; width:160px; border-radius:99px;
+      background:linear-gradient(90deg,#00008B,#0000FF,#00FFFF,#FFFF00,#FF4500,#FF0000);
+    }
+    .legend-label { font-size:0.65rem; color:var(--muted); font-family:var(--mono); }
+
+    /* Explain boxes */
+    .explain-grid {
+      display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem;
+    }
+    .explain-item {
+      background:var(--bg1); border:1px solid var(--border); border-radius:12px; padding:1rem;
+    }
+    .explain-item-ttl { font-size:0.75rem; font-weight:700; margin-bottom:6px; }
+    .explain-item-txt { font-size:0.68rem; color:var(--muted); line-height:1.7; }
+
+    /* ── Bottom nav ──────────────────────────────────────────── */
+    .bottom-nav {
+      max-width:1200px; margin:0 auto; padding:0 2.5rem 4rem;
+      display:grid; grid-template-columns:repeat(auto-fit,minmax(175px,1fr)); gap:1rem;
+    }
+    .bnav {
+      display:flex; align-items:center; gap:12px; padding:1rem 1.125rem;
+      background:var(--bg1); border:1px solid var(--border); border-radius:14px;
+      text-decoration:none; color:var(--muted); font-size:0.78rem;
+      transition:all 0.22s; position:relative; overflow:hidden;
+    }
+    .bnav::after { content:''; position:absolute; inset:0; background:linear-gradient(135deg,var(--glow-t),transparent); opacity:0; transition:opacity 0.3s; }
+    .bnav:hover { border-color:rgba(0,212,255,0.28); color:var(--teal); transform:translateY(-3px); box-shadow:0 16px 40px rgba(0,0,0,0.3); }
+    .bnav:hover::after { opacity:1; }
+    .bnav-ico { width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; z-index:1; transition:transform 0.22s; }
+    .bnav:hover .bnav-ico { transform:scale(1.1); }
+    .bnav-ttl { font-weight:600; color:var(--white); margin-bottom:2px; z-index:1; }
+    .bnav-dsc { font-size:0.65rem; z-index:1; }
+    .bnav-txt { z-index:1; }
+
+    /* ── Footer ──────────────────────────────────────────────── */
+    .footer { text-align:center; padding:1.75rem 2rem; font-size:0.68rem; color:var(--muted); border-top:1px solid var(--border); font-family:var(--mono); }
+
+    .hidden { display:none !important; }
+    @media(max-width:600px){ .pipe-wrap{flex-wrap:wrap;} .pn{min-width:calc(50% - 4px);} .pn:nth-child(5){border-radius:0 0 14px 14px;} }
+  </style>
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<div class="page">
+
+  <!-- Header -->
+  <header class="header">
+    <a href="/" class="logo">
+      <div class="logo-mark">🔒</div>
+      <span class="logo-name">SecureLens</span>
+    </a>
+    <nav class="nav">
+      <a href="/comparison">Comparison</a>
+      <a href="/demo-live">Live Demo</a>
+      <a href="/attack-demo">Attack Demo</a>
+      <a href="/dashboard">Analytics</a>
+    </nav>
+    <div class="pills">
+      <span class="pill pill-t">CKKS</span>
+      <span class="pill pill-e">89.42%</span>
+      <span class="pill pill-p">128-bit</span>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-inner">
+
+      <!-- Left copy -->
+      <div>
+        <div class="eyebrow">Privacy-preserving medical AI</div>
+        <h1 class="hero-h1">
+          <span class="l1">Diagnose without</span>
+          <span class="l2">exposure.</span>
+        </h1>
+        <p class="hero-sub">
+          SecureLens analyzes chest X-rays using Fully Homomorphic
+          Encryption. The cloud server computes the diagnosis without
+          ever decrypting your image — cryptographic privacy, not a promise.
+        </p>
+        <div class="hero-stats">
+          <div>
+            <span class="stat-val" style="color:var(--teal)" id="s1">0%</span>
+            <span class="stat-lbl">Test accuracy</span>
+          </div>
+          <div class="stat-sep"></div>
+          <div>
+            <span class="stat-val" style="color:var(--emerald)">0%</span>
+            <span class="stat-lbl">Accuracy loss from FHE</span>
+          </div>
+          <div class="stat-sep"></div>
+          <div>
+            <span class="stat-val" style="color:var(--purple)" id="s3">0-bit</span>
+            <span class="stat-lbl">Security level</span>
+          </div>
+        </div>
+        <div class="cta-row">
+          <button class="btn-pri" onclick="document.getElementById('fileInput').click()">
+            Upload X-Ray →
+          </button>
+          <a href="/comparison" class="btn-ghost">See how it works</a>
+        </div>
+      </div>
+
+      <!-- Right: upload card -->
+      <div class="upload-card">
+        <div class="card-hdr">
+          <div class="card-ico ico-t">📤</div>
+          <div>
+            <div class="card-ttl">Upload Chest X-Ray</div>
+            <div class="card-sub-txt">PNG · JPG · JPEG — max 10 MB</div>
+          </div>
+        </div>
+
+        <div class="drop" id="dropZone">
+          <canvas id="enc-canvas"></canvas>
+          <div class="drop-inner" id="dropContent">
+            <span class="drop-emoji">🫁</span>
+            <p class="drop-t">Drop X-ray here</p>
+            <p class="drop-s">or click to browse</p>
+          </div>
+          <img id="previewImg" class="prev hidden" alt="X-ray preview"/>
+        </div>
+        <input type="file" id="fileInput" accept=".png,.jpg,.jpeg" hidden/>
+
+        <div class="btn-row">
+          <button class="cb cb-sec" id="browseBtn">📁 Browse</button>
+          <button class="cb cb-pri" id="analyzeBtn" disabled>🔍 Analyze Securely</button>
+        </div>
+        <div class="priv">
+          <span>🔐</span>
+          <span>Encrypted on device · Server sees only ciphertext · 128-bit CKKS security</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pipeline -->
+  <div class="pipe-wrap">
+    <div class="pn active" id="p1"><span class="pn-num">01</span><span class="pn-lbl">Upload</span><span class="pn-det">Select X-ray</span></div>
+    <div class="pn" id="p2"><span class="pn-num">02</span><span class="pn-lbl">Feature Extract</span><span class="pn-det">ResNet-18 → 512</span></div>
+    <div class="pn" id="p3"><span class="pn-num">03</span><span class="pn-lbl">CKKS Encrypt</span><span class="pn-det">512 floats → 326 KB</span></div>
+    <div class="pn" id="p4"><span class="pn-num">04</span><span class="pn-lbl">HE Inference</span><span class="pn-det">W @ ciphertext</span></div>
+    <div class="pn" id="p5"><span class="pn-num">05</span><span class="pn-lbl">Decrypt + Explain</span><span class="pn-det">Client-side only</span></div>
+  </div>
+
+  <!-- Result + Enc details -->
+  <div class="main-wrap">
+    <div class="result-grid">
+
+      <!-- Diagnosis -->
+      <div class="glass">
+        <div class="card-hdr">
+          <div class="card-ico ico-e">📊</div>
+          <div><div class="card-ttl">Diagnostic Result</div><div class="card-sub-txt">CKKS homomorphic inference</div></div>
+        </div>
+
+        <div class="idle" id="idleState">
+          <span class="idle-ico">🔬</span>
+          <p style="font-size:0.8rem;line-height:1.7">Upload a chest X-ray to begin<br/>privacy-preserving analysis.</p>
+          <p style="font-size:0.65rem;color:var(--muted);margin-top:0.75rem;font-family:var(--mono)">89.42% accuracy · 128-bit CKKS · 0% accuracy loss</p>
+        </div>
+
+        <div class="loading" id="loadingState">
+          <div class="rings"></div>
+          <p class="load-msg" id="loadMsg">Initialising...</p>
+          <div style="text-align:left;display:inline-block;margin-top:1rem">
+            <div class="ls" id="ls1">Preprocessing image</div>
+            <div class="ls" id="ls2">Encrypting with CKKS</div>
+            <div class="ls" id="ls3">Running HE inference</div>
+            <div class="ls" id="ls4">Decrypting result</div>
+            <div class="ls" id="ls5">Generating GradCAM heatmap</div>
+          </div>
+        </div>
+
+        <div class="res" id="resultState">
+          <div class="verdict" id="verdictBox">
+            <div class="verdict-glow"></div>
+            <span class="v-ico" id="vIcon">✅</span>
+            <div class="v-lbl" id="vLabel">Normal</div>
+            <div class="v-conf" id="vConf">Confidence: —</div>
+          </div>
+          <div class="bars">
+            <div class="br">
+              <span class="br-lbl">Normal</span>
+              <div class="br-track"><div class="br-fill fill-n" id="barN"></div></div>
+              <span class="br-pct" id="pctN">—</span>
+            </div>
+            <div class="br">
+              <span class="br-lbl">Pneumonia</span>
+              <div class="br-track"><div class="br-fill fill-p" id="barP"></div></div>
+              <span class="br-pct" id="pctP">—</span>
+            </div>
+          </div>
+          <button class="rst" id="resetBtn">↩ Analyze another image</button>
+        </div>
+      </div>
+
+      <!-- Encryption details -->
+      <div class="glass">
+        <div class="card-hdr">
+          <div class="card-ico ico-p">🔐</div>
+          <div><div class="card-ttl">Encryption Details</div><div class="card-sub-txt">CKKS · TenSEAL 0.3.14</div></div>
+        </div>
+        <div class="idle" id="encIdle">
+          <span class="idle-ico">🔒</span>
+          <p style="font-size:0.72rem;font-family:var(--mono);line-height:1.8;color:var(--muted)">Run a diagnosis to see<br/>live encryption parameters</p>
+        </div>
+        <div id="encDetails" class="hidden">
+          <div class="enc-box" id="encBox"></div>
+          <div class="trace-box">
+            <div class="box-ttl">📋 Pipeline trace</div>
+            <ol class="trace-list" id="traceList"></ol>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GradCAM Section (appears after diagnosis) -->
+  <div class="gradcam-section" id="gradcamSection">
+
+    <div class="gradcam-header">
+      <div class="gradcam-title-block">
+        <h2>🧠 GradCAM <span class="gradcam-accent">Explainability</span></h2>
+        <p>See which lung regions influenced the diagnosis — heatmap generated from the same X-ray</p>
+      </div>
+      <div class="mode-tabs">
+        <button class="mode-tab active" id="tabOverlay"  onclick="setMode('overlay')">🎨 Overlay</button>
+        <button class="mode-tab"        id="tabHeatmap"  onclick="setMode('heatmap')">🔥 Heatmap</button>
+        <button class="mode-tab"        id="tabOriginal" onclick="setMode('original')">📷 Original</button>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="gcam-loading" id="gcamLoading">
+      <div class="rings" style="margin-bottom:1rem"></div>
+      <p style="font-size:0.78rem;color:var(--yellow);font-family:var(--mono);font-weight:600">Computing GradCAM heatmap...</p>
+      <p style="font-size:0.68rem;color:var(--muted);margin-top:6px;font-family:var(--mono)">Running backward pass through ResNet-18</p>
+    </div>
+
+    <!-- Images -->
+    <div class="img-trio" id="imgTrio" style="display:none">
+      <div class="img-card">
+        <div class="img-card-hdr">
+          <div class="img-dot" style="background:var(--teal)"></div>
+          <div><div class="img-card-ttl">Original X-Ray</div><div class="img-card-sub">Input image</div></div>
+        </div>
+        <div class="img-wrap">
+          <img id="gcamOriginal" src="" alt="Original X-ray" style="display:none"/>
+          <div class="img-placeholder" id="phOrig"><span>📷</span><p>Original</p></div>
+        </div>
+      </div>
+
+      <div class="img-card">
+        <div class="img-card-hdr">
+          <div class="img-dot" style="background:var(--yellow)"></div>
+          <div><div class="img-card-ttl" id="centerTitle">GradCAM Overlay</div><div class="img-card-sub">Red = high attention</div></div>
+        </div>
+        <div class="img-wrap">
+          <img id="gcamCenter" src="" alt="GradCAM" style="display:none"/>
+          <div class="img-placeholder" id="phCenter"><span>🔥</span><p>Heatmap overlay</p></div>
+        </div>
+      </div>
+
+      <div class="img-card">
+        <div class="img-card-hdr">
+          <div class="img-dot" style="background:var(--red)"></div>
+          <div><div class="img-card-ttl">Pure Heatmap</div><div class="img-card-sub">Activation intensity</div></div>
+        </div>
+        <div class="img-wrap">
+          <img id="gcamHeatmap" src="" alt="Pure heatmap" style="display:none"/>
+          <div class="img-placeholder" id="phHeat"><span>🌡️</span><p>Pure heatmap</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="gcam-stats" id="gcamStats" style="display:none">
+      <div class="gcam-stat">
+        <div class="gcam-stat-lbl">Max activation</div>
+        <div class="gcam-stat-val" id="gcamMax" style="color:var(--yellow)">—</div>
+      </div>
+      <div class="gcam-stat">
+        <div class="gcam-stat-lbl">Mean activation</div>
+        <div class="gcam-stat-val" id="gcamMean" style="color:var(--teal)">—</div>
+      </div>
+      <div class="gcam-stat">
+        <div class="gcam-stat-lbl">Hot region</div>
+        <div class="gcam-stat-val" id="gcamHot" style="color:var(--red)">—</div>
+      </div>
+      <div class="gcam-stat">
+        <div class="gcam-stat-lbl">Focus area</div>
+        <div class="gcam-stat-val" id="gcamFocus" style="color:var(--emerald);font-size:0.9rem">—</div>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="heatmap-legend" id="gcamLegend" style="display:none">
+      <div class="legend-bar"></div>
+      <span class="legend-label">Cold (low attention)</span>
+      <span class="legend-label" style="margin-left:auto">Hot (high attention)</span>
+    </div>
+
+    <!-- Explain boxes -->
+    <div class="explain-grid">
+      <div class="explain-item">
+        <div class="explain-item-ttl" style="color:var(--teal)">🧠 What is GradCAM?</div>
+        <div class="explain-item-txt">Gradient-weighted Class Activation Mapping flows gradients backward through the final convolutional layer to highlight which image regions most influenced the model's prediction.</div>
+      </div>
+      <div class="explain-item">
+        <div class="explain-item-ttl" style="color:var(--yellow)">🎨 Reading the heatmap</div>
+        <div class="explain-item-txt">Red/yellow = high attention (model focused here). Blue/purple = low attention. For pneumonia, expect attention in lung fields where infiltrates and consolidation appear.</div>
+      </div>
+      <div class="explain-item">
+        <div class="explain-item-ttl" style="color:var(--emerald)">✅ Why this matters</div>
+        <div class="explain-item-txt">Explainability proves the model learned real medical features — not shortcuts. Radiologists can verify the model focuses on correct anatomical regions before trusting its diagnosis.</div>
+      </div>
+      <div class="explain-item">
+        <div class="explain-item-ttl" style="color:var(--purple)">🔒 FHE + GradCAM</div>
+        <div class="explain-item-txt">GradCAM runs on the full ResNet model on the server as a separate explainability step. The encrypted FHE inference path uses only the linear head on ciphertexts.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom nav -->
+  <div class="bottom-nav">
+    <a href="/comparison" class="bnav">
+      <div class="bnav-ico" style="background:rgba(0,212,255,0.1)">📊</div>
+      <div class="bnav-txt"><div class="bnav-ttl">FHE Comparison</div><div class="bnav-dsc">Before vs After encryption</div></div>
+    </a>
+    <a href="/demo-live" class="bnav">
+      <div class="bnav-ico" style="background:rgba(0,255,136,0.1)">⚡</div>
+      <div class="bnav-txt"><div class="bnav-ttl">Live Demo</div><div class="bnav-dsc">FHE vs Traditional</div></div>
+    </a>
+    <a href="/attack-demo" class="bnav">
+      <div class="bnav-ico" style="background:rgba(255,77,109,0.1)">⚔️</div>
+      <div class="bnav-txt"><div class="bnav-ttl">Attack Demo</div><div class="bnav-dsc">FHE significance proof</div></div>
+    </a>
+    <a href="/dashboard" class="bnav">
+      <div class="bnav-ico" style="background:rgba(123,97,255,0.1)">📈</div>
+      <div class="bnav-txt"><div class="bnav-ttl">Analytics</div><div class="bnav-dsc">Metrics &amp; benchmarks</div></div>
+    </a>
+    <a href="/api/docs" class="bnav">
+      <div class="bnav-ico" style="background:rgba(255,209,102,0.1)">📖</div>
+      <div class="bnav-txt"><div class="bnav-ttl">API Docs</div><div class="bnav-dsc">All 9 endpoints</div></div>
+    </a>
+  </div>
+
+  <footer class="footer">
+    SecureLens · CKKS Fully Homomorphic Encryption · TenSEAL 0.3.14 · PyTorch · ResNet-18 · IIIT Naya Raipur · July 2026
+  </footer>
+</div>
+
+<script>
+/* ── Particle background ──────────────────────────────────── */
+const bgC = document.getElementById('bg-canvas');
+const bgX = bgC.getContext('2d');
+let W, H, pts = [];
+function resize(){ W = bgC.width = window.innerWidth; H = bgC.height = window.innerHeight; }
+resize(); window.addEventListener('resize', resize);
+class Pt {
+  constructor(){ this.reset(); }
+  reset(){
+    this.x=(Math.random()*W); this.y=(Math.random()*H);
+    this.vx=(Math.random()-0.5)*0.25; this.vy=(Math.random()-0.5)*0.25;
+    this.r=Math.random()*1.2+0.3; this.a=Math.random()*0.3+0.05;
+    this.c=Math.random()<0.6?'0,212,255':'0,255,136';
+  }
+  tick(){ this.x+=this.vx; this.y+=this.vy; if(this.x<0||this.x>W||this.y<0||this.y>H) this.reset(); }
+  draw(){ bgX.beginPath(); bgX.arc(this.x,this.y,this.r,0,Math.PI*2); bgX.fillStyle=`rgba(${this.c},${this.a})`; bgX.fill(); }
+}
+for(let i=0;i<100;i++) pts.push(new Pt());
+function connect(){
+  for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++){
+    const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);
+    if(d<110){ bgX.beginPath(); bgX.moveTo(pts[i].x,pts[i].y); bgX.lineTo(pts[j].x,pts[j].y);
+      bgX.strokeStyle=`rgba(0,212,255,${0.05*(1-d/110)})`; bgX.lineWidth=0.5; bgX.stroke(); }
+  }
+}
+(function loop(){ bgX.clearRect(0,0,W,H); pts.forEach(p=>{p.tick();p.draw();}); connect(); requestAnimationFrame(loop); })();
+
+/* ── Animated counters ───────────────────────────────────── */
+function animCount(el, target, suf, dur=1800){
+  const t0=performance.now(), isF=target%1!==0;
+  (function tick(now){ const t=Math.min((now-t0)/dur,1),e=1-Math.pow(1-t,3);
+    el.textContent=(isF?(target*e).toFixed(2):Math.round(target*e))+suf;
+    if(t<1) requestAnimationFrame(tick); })(performance.now());
+}
+window.addEventListener('load',()=>{ setTimeout(()=>{
+  animCount(document.getElementById('s1'),89.42,'%');
+  animCount(document.getElementById('s3'),128,'-bit');
+},600); });
+
+/* ── Encryption canvas visualizer ───────────────────────── */
+const encC = document.getElementById('enc-canvas');
+const encX = encC.getContext('2d');
+let encPts=[], encOn=false, encRAF;
+function startEnc(){
+  const dz=document.getElementById('dropZone');
+  encC.width=dz.clientWidth; encC.height=dz.clientHeight;
+  encPts=[];
+  for(let i=0;i<80;i++) encPts.push({x:Math.random()*encC.width,y:Math.random()*encC.height,
+    vx:(Math.random()-0.5)*1.5,vy:(Math.random()-0.5)*1.5,
+    life:Math.random(),char:String.fromCharCode(0x30A0+Math.random()*96)});
+  encC.classList.add('on'); encOn=true; animEnc();
+}
+function animEnc(){
+  if(!encOn) return;
+  encX.clearRect(0,0,encC.width,encC.height);
+  encPts.forEach(p=>{
+    p.x+=p.vx; p.y+=p.vy; p.life-=0.005;
+    if(p.life<=0){p.x=Math.random()*encC.width;p.y=Math.random()*encC.height;p.life=Math.random();p.char=String.fromCharCode(0x30A0+Math.random()*96);}
+    encX.font=`${10+Math.random()*6}px 'Space Mono',monospace`;
+    encX.fillStyle=`rgba(0,212,255,${p.life*0.55})`; encX.fillText(p.char,p.x,p.y);
+  });
+  encRAF=requestAnimationFrame(animEnc);
+}
+function stopEnc(){ encOn=false; cancelAnimationFrame(encRAF); encX.clearRect(0,0,encC.width,encC.height); encC.classList.remove('on'); }
+
+/* ── Pipeline ────────────────────────────────────────────── */
+function setPipe(n){
+  ['p1','p2','p3','p4','p5'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    el.className='pn'+(i<n?' done':i===n?' active':'');
+  });
+}
+
+/* ── File handling ───────────────────────────────────────── */
+const dropZone=document.getElementById('dropZone');
+const dropCont=document.getElementById('dropContent');
+const prev=document.getElementById('previewImg');
+const fileIn=document.getElementById('fileInput');
+let selFile=null;
+
+document.getElementById('browseBtn').addEventListener('click',()=>fileIn.click());
+dropZone.addEventListener('click',e=>{ if(e.target!==document.getElementById('analyzeBtn')&&e.target!==document.getElementById('browseBtn')) fileIn.click(); });
+fileIn.addEventListener('change',e=>{ if(e.target.files[0]) handleFile(e.target.files[0]); });
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('over');});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('over'));
+dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('over');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
+
+function handleFile(f){
+  if(!['image/png','image/jpeg','image/jpg'].includes(f.type)){alert('Use PNG or JPEG.');return;}
+  selFile=f;
+  const r=new FileReader();
+  r.onload=ev=>{prev.src=ev.target.result;prev.classList.remove('hidden');dropCont.classList.add('hidden');dropZone.classList.add('has-file');startEnc();};
+  r.readAsDataURL(f);
+  document.getElementById('analyzeBtn').disabled=false;
+  setPipe(0);
+}
+
+/* ── States ──────────────────────────────────────────────── */
+function showState(s){
+  document.getElementById('idleState').style.display    = s==='idle'    ?'':'none';
+  document.getElementById('loadingState').className     = 'loading'+(s==='loading'?' on':'');
+  document.getElementById('resultState').className      = 'res'+(s==='result'?' on':'');
+  document.getElementById('encIdle').style.display      = s==='idle'    ?'':'none';
+  document.getElementById('encDetails').classList[s==='result'?'remove':'add']('hidden');
+}
+
+/* ── Analyze ─────────────────────────────────────────────── */
+document.getElementById('analyzeBtn').addEventListener('click', run);
+
+async function run(){
+  if(!selFile) return;
+  document.getElementById('analyzeBtn').disabled=true;
+  showState('loading'); setPipe(1);
+  document.getElementById('gradcamSection').classList.remove('on');
+
+  const msgs=['Preprocessing image…','Encrypting with CKKS…','Running HE inference…','Decrypting result…','Generating GradCAM heatmap…'];
+  const lids=['ls1','ls2','ls3','ls4','ls5'];
+
+  for(let i=0;i<4;i++){
+    if(i>0) document.getElementById(lids[i-1]).className='ls done';
+    document.getElementById(lids[i]).className='ls active';
+    document.getElementById('loadMsg').textContent=msgs[i];
+    setPipe(i+1);
+    if(i<3) await sleep(550);
+  }
+
+  const fd=new FormData(); fd.append('image',selFile);
+
+  let predData;
+  try{
+    const r=await fetch('/api/predict',{method:'POST',body:fd});
+    predData=await r.json();
+    if(!r.ok||predData.error) throw new Error(predData.error||'Prediction error');
+  }catch(err){
+    alert('Error: '+err.message); showState('idle');
+    document.getElementById('analyzeBtn').disabled=false; setPipe(0); return;
+  }
+
+  document.getElementById(lids[3]).className='ls done';
+  stopEnc(); setPipe(4);
+  renderResult(predData);
+  showState('result');
+
+  // Now run GradCAM
+  document.getElementById(lids[4]).className='ls active';
+  document.getElementById('loadMsg').textContent=msgs[4];
+  document.getElementById('gradcamSection').classList.add('on');
+  document.getElementById('gcamLoading').classList.add('on');
+  document.getElementById('imgTrio').style.display='none';
+  document.getElementById('gcamStats').style.display='none';
+  document.getElementById('gcamLegend').style.display='none';
+
+  // Scroll to GradCAM
+  setTimeout(()=>document.getElementById('gradcamSection').scrollIntoView({behavior:'smooth',block:'start'}),400);
+
+  const fd2=new FormData(); fd2.append('image',selFile);
+  try{
+    const r2=await fetch('/api/gradcam',{method:'POST',body:fd2});
+    const gcData=await r2.json();
+    if(gcData.error) throw new Error(gcData.error);
+    document.getElementById(lids[4]).className='ls done';
+    setPipe(5);
+    renderGradCAM(gcData);
+  }catch(e){
+    document.getElementById(lids[4]).className='ls done';
+    document.getElementById('gcamLoading').classList.remove('on');
+    console.warn('GradCAM error:',e.message);
+  }
+
+  document.getElementById('analyzeBtn').disabled=false;
+}
+
+/* ── Render prediction ───────────────────────────────────── */
+function renderResult(d){
+  const isPneu=d.prediction==='Pneumonia';
+  const box=document.getElementById('verdictBox');
+  box.className='verdict '+(isPneu?'pneumonia':'normal');
+  document.getElementById('vIcon').textContent=isPneu?'⚠️':'✅';
+  document.getElementById('vLabel').textContent=d.prediction;
+  document.getElementById('vConf').textContent=`Confidence: ${d.confidence}%`;
+  setTimeout(()=>{
+    document.getElementById('barN').style.width=d.normal_score+'%';
+    document.getElementById('barP').style.width=d.pneumonia_score+'%';
+  },150);
+  document.getElementById('pctN').textContent=d.normal_score+'%';
+  document.getElementById('pctP').textContent=d.pneumonia_score+'%';
+
+  const enc=d.encryption_info||{};
+  document.getElementById('encBox').innerHTML=
+    '<div class="box-ttl">🔐 Encryption Parameters</div>'+
+    '<div class="enc-kv-grid">'+
+    [['Scheme',enc.scheme||'CKKS'],['Library',enc.library||'TenSEAL'],
+     ['Security',(enc.security_bits||128)+'-bit'],['Poly Mod',enc.poly_modulus_degree||8192],
+     ['Vec Size',(enc.feature_vector_size||512)+' values'],['CT Size',(enc.ciphertext_size_kb||326)+' KB']]
+    .map(([k,v])=>`<div class="ekv"><span class="ek">${k}: </span><span class="ev">${v}</span></div>`).join('')+
+    '</div>';
+  document.getElementById('traceList').innerHTML=
+    (d.pipeline_steps||[]).map(s=>`<li>${s}</li>`).join('');
+}
+
+/* ── Render GradCAM ──────────────────────────────────────── */
+let gcamData = null;
+let currentMode = 'overlay';
+
+function renderGradCAM(d){
+  gcamData = d;
+  document.getElementById('gcamLoading').classList.remove('on');
+
+  // Original
+  const imgO=document.getElementById('gcamOriginal');
+  imgO.src='data:image/png;base64,'+d.original_b64;
+  imgO.style.display='block';
+  document.getElementById('phOrig').style.display='none';
+
+  // Heatmap
+  const imgH=document.getElementById('gcamHeatmap');
+  imgH.src='data:image/png;base64,'+d.heatmap_b64;
+  imgH.style.display='block';
+  document.getElementById('phHeat').style.display='none';
+
+  applyMode('overlay');
+
+  // Stats
+  const cs=d.cam_stats||{};
+  document.getElementById('gcamMax').textContent  = cs.max_activation  || '—';
+  document.getElementById('gcamMean').textContent = cs.mean_activation || '—';
+  document.getElementById('gcamHot').textContent  = (cs.hot_region_pct||'—')+'%';
+  document.getElementById('gcamFocus').textContent= cs.focus || '—';
+
+  document.getElementById('imgTrio').style.display='grid';
+  document.getElementById('gcamStats').style.display='grid';
+  document.getElementById('gcamLegend').style.display='flex';
+}
+
+function setMode(mode){
+  currentMode = mode;
+  ['tabOverlay','tabHeatmap','tabOriginal'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  document.getElementById('tab'+mode.charAt(0).toUpperCase()+mode.slice(1)).classList.add('active');
+  if(gcamData) applyMode(mode);
+}
+
+function applyMode(mode){
+  const imgC=document.getElementById('gcamCenter');
+  const ttl=document.getElementById('centerTitle');
+  const phC=document.getElementById('phCenter');
+  if(!gcamData) return;
+  imgC.style.display='block'; phC.style.display='none';
+  if(mode==='overlay'){
+    imgC.src='data:image/png;base64,'+gcamData.overlay_b64;
+    ttl.textContent='GradCAM Overlay';
+  } else if(mode==='heatmap'){
+    imgC.src='data:image/png;base64,'+gcamData.heatmap_b64;
+    ttl.textContent='Pure Heatmap';
+  } else {
+    imgC.src='data:image/png;base64,'+gcamData.original_b64;
+    ttl.textContent='Original (reference)';
+  }
+}
+
+/* ── Reset ───────────────────────────────────────────────── */
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  selFile=null; prev.src=''; prev.classList.add('hidden');
+  dropCont.classList.remove('hidden'); dropZone.classList.remove('has-file','over');
+  fileIn.value=''; document.getElementById('analyzeBtn').disabled=true;
+  ['ls1','ls2','ls3','ls4','ls5'].forEach(id=>document.getElementById(id).className='ls');
+  stopEnc(); showState('idle'); setPipe(0);
+  document.getElementById('gradcamSection').classList.remove('on');
+  gcamData=null;
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+</script>
+</body>
+</html>

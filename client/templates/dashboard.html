@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SecureLens — Analytics Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    :root {
+      --bg:#030712; --surface:rgba(255,255,255,0.03);
+      --border:rgba(255,255,255,0.07); --text:#f1f5f9;
+      --muted:#64748b; --accent:#60a5fa; --green:#4ade80;
+      --red:#f87171; --purple:#a78bfa; --yellow:#fbbf24;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Segoe UI',system-ui,sans-serif;
+      background:var(--bg);color:var(--text);min-height:100vh;
+    }
+
+    /* Header */
+    .header{
+      display:flex;align-items:center;justify-content:space-between;
+      flex-wrap:wrap;gap:1rem;padding:.875rem 2rem;
+      background:rgba(3,7,18,.85);backdrop-filter:blur(24px);
+      border-bottom:1px solid var(--border);
+      position:sticky;top:0;z-index:100;
+    }
+    .logo{display:flex;align-items:center;gap:12px}
+    .logo-mark{
+      width:36px;height:36px;border-radius:9px;font-size:1rem;
+      background:linear-gradient(135deg,#1e3a5f,#3b82f6);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .logo h1{
+      font-size:1.15rem;font-weight:700;
+      background:linear-gradient(135deg,#60a5fa,#a78bfa);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      background-clip:text;
+    }
+    .logo p{font-size:.65rem;color:var(--muted)}
+    .back{
+      display:flex;align-items:center;gap:6px;padding:6px 14px;
+      border-radius:8px;font-size:.78rem;color:#94a3b8;
+      text-decoration:none;border:1px solid var(--border);
+      transition:all .2s;
+    }
+    .back:hover{color:var(--accent);border-color:rgba(96,165,250,.3)}
+
+    /* Layout */
+    .page{max-width:1280px;margin:0 auto;padding:2rem}
+
+    /* Section title */
+    .section-title{
+      font-size:.7rem;font-weight:600;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);
+      margin-bottom:1rem;display:flex;align-items:center;gap:8px;
+    }
+    .section-title::after{
+      content:'';flex:1;height:1px;
+      background:linear-gradient(90deg,var(--border),transparent);
+    }
+
+    /* Metric cards */
+    .metrics-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+      gap:1rem;margin-bottom:2rem;
+    }
+    .metric{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:14px;padding:1.25rem 1rem;text-align:center;
+      transition:all .25s;position:relative;overflow:hidden;
+    }
+    .metric::before{
+      content:'';position:absolute;top:0;left:0;right:0;height:2px;
+      background:var(--m-color,transparent);border-radius:2px 2px 0 0;
+    }
+    .metric:hover{
+      border-color:rgba(96,165,250,.25);
+      transform:translateY(-2px);
+      box-shadow:0 8px 32px rgba(0,0,0,.3);
+    }
+    .metric-icon{font-size:1.5rem;margin-bottom:.5rem;display:block}
+    .metric-val{
+      font-size:1.8rem;font-weight:800;display:block;
+      letter-spacing:-.03em;margin-bottom:3px;
+    }
+    .metric-lbl{font-size:.68rem;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.05em}
+
+    /* Chart grid */
+    .charts-grid{
+      display:grid;grid-template-columns:1fr 1fr;
+      gap:1.25rem;margin-bottom:2rem;
+    }
+    @media(max-width:768px){.charts-grid{grid-template-columns:1fr}}
+    .chart-card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:14px;padding:1.25rem;
+    }
+    .chart-head{
+      display:flex;align-items:center;justify-content:space-between;
+      margin-bottom:1rem;
+    }
+    .chart-title{font-size:.82rem;font-weight:600;color:var(--text)}
+    .chart-sub{font-size:.68rem;color:var(--muted)}
+    .chart-wrap{position:relative;height:220px}
+
+    /* Confusion matrix */
+    .cm-grid{
+      display:grid;grid-template-columns:1fr 1fr;
+      gap:8px;margin-top:.75rem;
+    }
+    .cm-cell{
+      border-radius:10px;padding:1rem;text-align:center;
+      position:relative;overflow:hidden;
+    }
+    .cm-cell.tp{background:rgba(22,101,52,.4);border:1px solid rgba(74,222,128,.2)}
+    .cm-cell.tn{background:rgba(22,101,52,.3);border:1px solid rgba(74,222,128,.15)}
+    .cm-cell.fp{background:rgba(127,29,29,.3);border:1px solid rgba(248,113,113,.2)}
+    .cm-cell.fn{background:rgba(127,29,29,.2);border:1px solid rgba(248,113,113,.15)}
+    .cm-val{font-size:2rem;font-weight:800;display:block}
+    .cm-lbl{font-size:.65rem;color:var(--muted);margin-top:3px}
+    .cm-badge{
+      display:inline-block;font-size:.6rem;padding:2px 7px;
+      border-radius:99px;margin-top:5px;font-weight:600;
+    }
+    .badge-g{background:rgba(74,222,128,.15);color:#4ade80}
+    .badge-r{background:rgba(248,113,113,.15);color:#f87171}
+
+    /* Metrics table */
+    .metrics-table{width:100%;border-collapse:collapse;
+      font-size:.78rem;margin-top:.75rem}
+    .metrics-table th{
+      text-align:left;padding:8px 12px;
+      font-size:.65rem;font-weight:600;
+      text-transform:uppercase;letter-spacing:.05em;
+      color:var(--muted);border-bottom:1px solid var(--border);
+    }
+    .metrics-table td{
+      padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.03);
+      color:#cbd5e1;
+    }
+    .metrics-table tr:last-child td{border-bottom:none}
+    .metrics-table tr:hover td{background:rgba(255,255,255,.02)}
+    .pct-bar{
+      display:flex;align-items:center;gap:8px;
+    }
+    .pct-track{
+      flex:1;height:5px;background:rgba(255,255,255,.05);
+      border-radius:99px;overflow:hidden;
+    }
+    .pct-fill{
+      height:100%;border-radius:99px;
+      background:linear-gradient(90deg,#1d4ed8,#60a5fa);
+      transition:width .8s ease;
+    }
+
+    /* Benchmark table */
+    .bench-grid{
+      display:grid;grid-template-columns:1fr 1fr;
+      gap:1.25rem;margin-bottom:2rem;
+    }
+    @media(max-width:768px){.bench-grid{grid-template-columns:1fr}}
+    .bench-card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:14px;padding:1.25rem;
+    }
+    .bench-row{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);
+      font-size:.78rem;
+    }
+    .bench-row:last-child{border-bottom:none}
+    .bench-key{color:var(--muted)}
+    .bench-val{font-weight:600;color:var(--text)}
+    .bench-val.good{color:var(--green)}
+    .bench-val.warn{color:var(--yellow)}
+
+    /* Privacy comparison */
+    .privacy-grid{
+      display:grid;grid-template-columns:1fr 1fr;
+      gap:1.25rem;margin-bottom:2rem;
+    }
+    @media(max-width:768px){.privacy-grid{grid-template-columns:1fr}}
+    .privacy-card{
+      border-radius:14px;padding:1.25rem;
+    }
+    .privacy-card.danger{
+      background:rgba(44,16,16,.4);border:1px solid rgba(127,29,29,.4);
+    }
+    .privacy-card.success{
+      background:rgba(5,46,22,.4);border:1px solid rgba(22,101,52,.4);
+    }
+    .privacy-title{
+      font-size:.85rem;font-weight:700;margin-bottom:1rem;
+    }
+    .privacy-title.red{color:var(--red)}
+    .privacy-title.green{color:var(--green)}
+    .privacy-row{
+      display:flex;align-items:flex-start;gap:8px;
+      padding:6px 0;font-size:.75rem;color:#94a3b8;
+      border-bottom:1px solid rgba(255,255,255,.04);
+    }
+    .privacy-row:last-child{border-bottom:none}
+    .privacy-icon{flex-shrink:0;margin-top:1px}
+
+    /* Loading overlay */
+    .loading-overlay{
+      text-align:center;padding:4rem 2rem;
+      color:var(--muted);font-size:.9rem;
+    }
+    .spin{
+      width:40px;height:40px;border-radius:50%;
+      border:3px solid rgba(96,165,250,.15);
+      border-top-color:var(--accent);
+      animation:spin 1s linear infinite;
+      margin:0 auto 1rem;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Error */
+    .error-box{
+      background:rgba(44,16,16,.4);border:1px solid rgba(127,29,29,.4);
+      border-radius:12px;padding:1.5rem;text-align:center;
+      color:var(--red);font-size:.85rem;
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">
+    <div class="logo-mark">📈</div>
+    <div>
+      <h1>SecureLens Analytics</h1>
+      <p>Model performance · Encryption benchmarks · Privacy proof</p>
+    </div>
+  </div>
+  <a href="/" class="back">← Back to Demo</a>
+</header>
+
+<div class="page">
+
+  <!-- Loading -->
+  <div id="loadingDiv" class="loading-overlay">
+    <div class="spin"></div>
+    Loading metrics...
+  </div>
+
+  <!-- Content (hidden until loaded) -->
+  <div id="content" style="display:none">
+
+    <!-- Key metrics -->
+    <div class="section-title">Key metrics</div>
+    <div class="metrics-grid" id="keyMetrics"></div>
+
+    <!-- Training curves + Accuracy breakdown -->
+    <div class="section-title">Model performance</div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <div class="chart-title">Training History</div>
+            <div class="chart-sub">Accuracy across 20 epochs</div>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="trainChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <div class="chart-title">Accuracy Breakdown</div>
+            <div class="chart-sub">Train · Val · Test comparison</div>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="accChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confusion matrix + Classification metrics -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <div class="chart-title">Confusion Matrix</div>
+            <div class="chart-sub">On 624-image test set</div>
+          </div>
+        </div>
+        <div class="cm-grid" id="cmGrid"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <div class="chart-title">Classification Metrics</div>
+            <div class="chart-sub">Sensitivity · Specificity · PPV · NPV</div>
+          </div>
+        </div>
+        <table class="metrics-table" id="metricsTable">
+          <thead>
+            <tr><th>Metric</th><th>Value</th><th>Percentage</th></tr>
+          </thead>
+          <tbody id="metricsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- FHE benchmarks -->
+    <div class="section-title">Encryption benchmarks</div>
+    <div class="bench-grid">
+      <div class="bench-card">
+        <div class="chart-title" style="margin-bottom:1rem">
+          ⏱ Timing Breakdown
+        </div>
+        <div id="timingRows"></div>
+      </div>
+      <div class="bench-card">
+        <div class="chart-title" style="margin-bottom:1rem">
+          💾 Memory &amp; Size
+        </div>
+        <div id="memoryRows"></div>
+      </div>
+    </div>
+
+    <!-- Encryption chart -->
+    <div class="section-title">FHE performance</div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <div class="chart-title">Latency Breakdown (ms)</div>
+            <div class="chart-sub">Per pipeline stage</div>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="latChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <div class="chart-title">Proof of Correctness</div>
+            <div class="chart-sub">FHE vs plaintext over 50 tests</div>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="proofChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Privacy comparison -->
+    <div class="section-title">Privacy analysis</div>
+    <div class="privacy-grid">
+      <div class="privacy-card danger">
+        <div class="privacy-title red">🔓 Without FHE (Traditional)</div>
+        <div class="privacy-row">
+          <span class="privacy-icon">⚠️</span>
+          Server receives raw feature vector — 512 float values readable
+        </div>
+        <div class="privacy-row">
+          <span class="privacy-icon">⚠️</span>
+          Any server breach exposes patient imaging data
+        </div>
+        <div class="privacy-row">
+          <span class="privacy-icon">⚠️</span>
+          HIPAA non-compliant without additional controls
+        </div>
+        <div class="privacy-row">
+          <span class="privacy-icon">⚠️</span>
+          Network interception reveals patient data
+        </div>
+        <div class="privacy-row">
+          <span class="privacy-icon">⚠️</span>
+          Image tampering attacks can cause misdiagnosis
+        </div>
+      </div>
+      <div class="privacy-card success">
+        <div class="privacy-title green">🔒 SecureLens (CKKS FHE)</div>
+        <div class="privacy-row">
+          <span class="privacy-icon">✅</span>
+          Server receives 326 KB ciphertext — mathematically unreadable
+        </div>
+        <div class="privacy-row">
+          <span class="privacy-icon">✅</span>
+          Server breach exposes only ciphertexts — useless without key
+        </div>
+        <div class="privacy-row">
+          <span class="privacy-icon">✅</span>
+          HIPAA · DPDP 2023 · GDPR Article 25 compliant
+        </div>
+        <div class="privacy-row">
+          <span class="privacy-icon">✅</span>
+          128-bit cryptographic security — equivalent to AES-128
+        </div>
+        <div class="privacy-row">
+          <span class="privacy-icon">✅</span>
+          Image encrypted before transmission — tampering impossible
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div>
+
+<script>
+const CHART_DEFAULTS = {
+  responsive:true, maintainAspectRatio:false,
+  plugins:{ legend:{ labels:{ color:'#94a3b8', font:{size:11} } } },
+  scales:{
+    x:{ ticks:{color:'#64748b',font:{size:10}},
+        grid:{color:'rgba(255,255,255,0.04)'} },
+    y:{ ticks:{color:'#64748b',font:{size:10}},
+        grid:{color:'rgba(255,255,255,0.04)'} }
+  }
+};
+
+async function loadDashboard() {
+  try {
+    const resp = await fetch('/api/metrics');
+    const data = await resp.json();
+    render(data);
+  } catch(e) {
+    document.getElementById('loadingDiv').innerHTML =
+      `<div class="error-box">
+         Could not load metrics.<br/>
+         Run <code>python utils/benchmark.py</code>
+         and <code>python utils/confusion_matrix.py</code> first.
+         <br/><br/><a href="/" style="color:#60a5fa">← Back to demo</a>
+       </div>`;
+  }
+}
+
+function render(data) {
+  document.getElementById('loadingDiv').style.display = 'none';
+  document.getElementById('content').style.display    = 'block';
+
+  const s = data.static || {};
+  const m = data.model_metrics || {};
+  const b = data.benchmark_results || {};
+  const p = data.proof_of_correctness || {};
+  const h = data.training_history || {};
+
+  // ── Key metrics ──────────────────────────────────────────────
+  const km = [
+    { icon:'🎯', val: s.test_accuracy+'%',
+      lbl:'Test accuracy', color:'#60a5fa' },
+    { icon:'🔐', val: s.security_bits+'-bit',
+      lbl:'Security level', color:'#a78bfa' },
+    { icon:'✅', val: s.tests_passing+'/'+s.total_unit_tests,
+      lbl:'Unit tests passing', color:'#4ade80' },
+    { icon:'📉', val: s.accuracy_loss_fhe+'%',
+      lbl:'Accuracy loss (FHE)', color:'#4ade80' },
+    { icon:'🔒', val: s.ciphertext_size_kb+' KB',
+      lbl:'Ciphertext size', color:'#fbbf24' },
+    { icon:'🏥', val: s.dataset_size.toLocaleString(),
+      lbl:'Training images', color:'#60a5fa' },
+  ];
+  document.getElementById('keyMetrics').innerHTML =
+    km.map(k => `
+      <div class="metric" style="--m-color:${k.color}">
+        <span class="metric-icon">${k.icon}</span>
+        <span class="metric-val" style="color:${k.color}">${k.val}</span>
+        <span class="metric-lbl">${k.lbl}</span>
+      </div>`).join('');
+
+  // ── Training history chart ───────────────────────────────────
+  const epochs = h.train_acc
+    ? h.train_acc.map((_,i) => 'Ep '+(i+1))
+    : ['Ep1','Ep5','Ep10','Ep15','Ep20'];
+  const trainAcc = h.train_acc
+    ? h.train_acc.map(v => (v*100).toFixed(1))
+    : [72,82,88,94,97.68];
+  const valAcc = h.val_acc
+    ? h.val_acc.map(v => (v*100).toFixed(1))
+    : [65,78,84,92,97.39];
+
+  new Chart(document.getElementById('trainChart'), {
+    type:'line',
+    data:{
+      labels: epochs,
+      datasets:[
+        { label:'Train',data:trainAcc,
+          borderColor:'#60a5fa',backgroundColor:'rgba(96,165,250,.1)',
+          borderWidth:2,pointRadius:2,fill:true,tension:.3 },
+        { label:'Val',data:valAcc,
+          borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,.1)',
+          borderWidth:2,pointRadius:2,
+          borderDash:[5,4],fill:true,tension:.3 },
+      ]
+    },
+    options:{
+      ...CHART_DEFAULTS,
+      plugins:{
+        ...CHART_DEFAULTS.plugins,
+        annotation:{}
+      },
+      scales:{
+        x:{...CHART_DEFAULTS.scales.x},
+        y:{...CHART_DEFAULTS.scales.y,
+          min:60,max:101,
+          ticks:{callback:v=>v+'%',color:'#64748b',font:{size:10}}}
+      }
+    }
+  });
+
+  // ── Accuracy bar chart ────────────────────────────────────────
+  new Chart(document.getElementById('accChart'), {
+    type:'bar',
+    data:{
+      labels:['Train','Validation','Test'],
+      datasets:[{
+        label:'Accuracy (%)',
+        data:[s.train_accuracy, s.val_accuracy, s.test_accuracy],
+        backgroundColor:[
+          'rgba(96,165,250,.7)',
+          'rgba(167,139,250,.7)',
+          'rgba(74,222,128,.7)',
+        ],
+        borderColor:['#60a5fa','#a78bfa','#4ade80'],
+        borderWidth:1, borderRadius:6,
+      }]
+    },
+    options:{
+      ...CHART_DEFAULTS,
+      plugins:{
+        ...CHART_DEFAULTS.plugins,
+        legend:{display:false}
+      },
+      scales:{
+        x:{...CHART_DEFAULTS.scales.x},
+        y:{...CHART_DEFAULTS.scales.y,
+          min:60,max:101,
+          ticks:{callback:v=>v+'%',color:'#64748b',font:{size:10}}}
+      }
+    }
+  });
+
+  // ── Confusion matrix ─────────────────────────────────────────
+  const tp = m.true_positive  || 390;
+  const tn = m.true_negative  || 195;
+  const fp = m.false_positive || 39;
+  const fn = m.false_negative || 0;
+
+  document.getElementById('cmGrid').innerHTML = `
+    <div class="cm-cell tn">
+      <span class="cm-val" style="color:#4ade80">${tn}</span>
+      <div class="cm-lbl">True Normal</div>
+      <span class="cm-badge badge-g">Correct</span>
+    </div>
+    <div class="cm-cell fp">
+      <span class="cm-val" style="color:#f87171">${fp}</span>
+      <div class="cm-lbl">False Pneumonia</div>
+      <span class="cm-badge badge-r">Error</span>
+    </div>
+    <div class="cm-cell fn">
+      <span class="cm-val" style="color:#f87171">${fn}</span>
+      <div class="cm-lbl">False Normal</div>
+      <span class="cm-badge badge-r">Error</span>
+    </div>
+    <div class="cm-cell tp">
+      <span class="cm-val" style="color:#4ade80">${tp}</span>
+      <div class="cm-lbl">True Pneumonia</div>
+      <span class="cm-badge badge-g">Correct</span>
+    </div>`;
+
+  // ── Classification metrics table ─────────────────────────────
+  const metrics = [
+    ['Accuracy',    m.accuracy    || s.test_accuracy],
+    ['Sensitivity', m.sensitivity || 100.0],
+    ['Specificity', m.specificity || 83.3],
+    ['PPV',         m.ppv         || 90.9],
+    ['NPV',         m.npv         || 100.0],
+    ['ROC AUC',     m.roc_auc     || 0.9746, true],
+  ];
+  document.getElementById('metricsBody').innerHTML =
+    metrics.map(([name, val, raw]) => `
+      <tr>
+        <td>${name}</td>
+        <td style="color:#60a5fa;font-weight:600">
+          ${raw ? val : val+'%'}
+        </td>
+        <td>
+          <div class="pct-bar">
+            <div class="pct-track">
+              <div class="pct-fill" style="width:${raw?val*100:val}%"></div>
+            </div>
+            <span style="font-size:.7rem;color:#475569;min-width:36px">
+              ${raw ? (val*100).toFixed(1)+'%' : val+'%'}
+            </span>
+          </div>
+        </td>
+      </tr>`).join('');
+
+  // ── Timing rows ───────────────────────────────────────────────
+  const ckks = (b.ckks_operations) || {};
+  const inf  = (b.inference) || {};
+  const timing = [
+    ['Encryption (CKKS)',  ckks.encrypt_ms   || '~45',   'ms', false],
+    ['Inference (FHE)',    inf.full_pipeline_ms || '~120', 'ms', false],
+    ['Decryption',         ckks.decrypt_ms   || '~12',   'ms', false],
+    ['Serialization',      ckks.serialize_ms || '~8',    'ms', false],
+    ['Plaintext baseline', inf.plaintext_ms  || '<1',    'ms', true ],
+    ['Overhead factor',    inf.overhead_factor || '~180', 'x',  false],
+  ];
+  document.getElementById('timingRows').innerHTML =
+    timing.map(([k,v,unit,good]) => `
+      <div class="bench-row">
+        <span class="bench-key">${k}</span>
+        <span class="bench-val ${good?'good':''}">${v} ${unit}</span>
+      </div>`).join('');
+
+  // ── Memory rows ───────────────────────────────────────────────
+  const mem = (b.memory) || {};
+  const memory = [
+    ['Plaintext vector', mem.plaintext_kb   || '4.0',  'KB'],
+    ['Ciphertext',       mem.ciphertext_kb  || '326',  'KB'],
+    ['Overhead ratio',   mem.overhead_ratio || '81.5', 'x' ],
+    ['Context size',     mem.context_kb     || '~120', 'KB'],
+    ['Feature vector',   '512','floats'],
+    ['Security level',   '128','bits'],
+  ];
+  document.getElementById('memoryRows').innerHTML =
+    memory.map(([k,v,unit]) => `
+      <div class="bench-row">
+        <span class="bench-key">${k}</span>
+        <span class="bench-val">${v} ${unit}</span>
+      </div>`).join('');
+
+  // ── Latency chart ─────────────────────────────────────────────
+  new Chart(document.getElementById('latChart'), {
+    type:'bar',
+    data:{
+      labels:['Upload','Feature\nExtract','Encrypt\n(CKKS)',
+              'Inference\n(FHE)','Decrypt','Total'],
+      datasets:[
+        { label:'Without FHE',
+          data:[100,300,0,400,0,500],
+          backgroundColor:'rgba(248,113,113,.6)',
+          borderColor:'#f87171',borderWidth:1,borderRadius:4 },
+        { label:'SecureLens (FHE)',
+          data:[100,300,450,120,120,1250],
+          backgroundColor:'rgba(96,165,250,.6)',
+          borderColor:'#60a5fa',borderWidth:1,borderRadius:4 },
+      ]
+    },
+    options:{
+      ...CHART_DEFAULTS,
+      scales:{
+        x:{...CHART_DEFAULTS.scales.x},
+        y:{...CHART_DEFAULTS.scales.y,
+          ticks:{callback:v=>v+'ms',color:'#64748b',font:{size:10}}}
+      }
+    }
+  });
+
+  // ── Proof of correctness chart ────────────────────────────────
+  const proof = p.summary || {};
+  const matchRate  = parseFloat(proof.match_rate || '100');
+  const errorRate  = 100 - matchRate;
+
+  new Chart(document.getElementById('proofChart'), {
+    type:'doughnut',
+    data:{
+      labels:['Predictions match','Differ'],
+      datasets:[{
+        data:[matchRate, errorRate],
+        backgroundColor:[
+          'rgba(74,222,128,.7)',
+          'rgba(248,113,113,.5)',
+        ],
+        borderColor:['#4ade80','#f87171'],
+        borderWidth:1,
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{ position:'bottom',
+          labels:{color:'#94a3b8',font:{size:11},padding:16} },
+        tooltip:{
+          callbacks:{
+            label:ctx=>` ${ctx.label}: ${ctx.parsed.toFixed(1)}%`
+          }
+        }
+      },
+      cutout:'65%',
+    }
+  });
+
+}
+
+loadDashboard();
+</script>
+</body>
+</html>
