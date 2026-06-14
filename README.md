@@ -1,4 +1,12 @@
 # SecureLens 🔒
+---
+title: SecureLens
+emoji: 🔒
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_port: 7860
+---
 ### Privacy-Preserving Medical Image Diagnostics using Fully Homomorphic Encryption
 
 ![Python](https://img.shields.io/badge/Python-3.13-blue)

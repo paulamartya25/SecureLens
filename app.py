@@ -3,7 +3,6 @@ app.py
 SecureLens — Main Flask Application Entry Point
 Run this file to start the entire application.
 """
-
 import os
 import sys
 
@@ -19,8 +18,8 @@ if __name__ == "__main__":
     
     # Configuration from environment
     debug_mode = os.getenv("FLASK_DEBUG", "false").lower() == "true"
-    host = os.getenv("SERVER_HOST", "127.0.0.1")
-    port = int(os.getenv("SERVER_PORT", "5000"))
+    host = os.getenv("SERVER_HOST", "0.0.0.0")
+    port = int(os.getenv("SERVER_PORT", os.getenv("PORT", "7860")))
     
     print("\n" + "=" * 55)
     print("  SecureLens Server Starting")
