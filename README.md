@@ -1,7 +1,15 @@
-# SecureLens 🔒
----
+﻿---
 title: SecureLens
 emoji: 🔒
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_port: 7860
+---
+# SecureLens ðŸ”’
+---
+title: SecureLens
+emoji: ðŸ”’
 colorFrom: blue
 colorTo: purple
 sdk: docker
@@ -21,7 +29,7 @@ app_port: 7860
 
 SecureLens is a privacy-preserving medical image diagnostic system
 that uses **Fully Homomorphic Encryption (FHE)** to classify chest
-X-rays as Normal or Pneumonia — without the cloud server ever
+X-rays as Normal or Pneumonia â€” without the cloud server ever
 seeing the raw patient data.
 
 The AI model runs inference **directly on encrypted data** using
@@ -31,71 +39,71 @@ the **CKKS scheme** (Cheon-Kim-Kim-Song) implemented via TenSEAL.
 
 ## Pipeline
 Client                    Crypto Layer              Cloud Server
-│                            │                         │
-│  Upload Chest X-Ray        │                         │
-│──────────────────────────► │                         │
-│                            │  Encrypt via CKKS       │
-│                            │─────────────────────────►
-│                            │                         │
-│                            │                    Run Linear
-│                            │                    Evaluation
-│                            │                    on Ciphertext
-│                            │                         │
-│                            │  Encrypted Prediction   │
-│                            │◄─────────────────────────
-│  Decrypt Result            │                         │
-│◄───────────────────────────│                         │
-│                            │                         │
+â”‚                            â”‚                         â”‚
+â”‚  Upload Chest X-Ray        â”‚                         â”‚
+â”‚â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–º â”‚                         â”‚
+â”‚                            â”‚  Encrypt via CKKS       â”‚
+â”‚                            â”‚â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–º
+â”‚                            â”‚                         â”‚
+â”‚                            â”‚                    Run Linear
+â”‚                            â”‚                    Evaluation
+â”‚                            â”‚                    on Ciphertext
+â”‚                            â”‚                         â”‚
+â”‚                            â”‚  Encrypted Prediction   â”‚
+â”‚                            â”‚â—„â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+â”‚  Decrypt Result            â”‚                         â”‚
+â”‚â—„â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”‚                         â”‚
+â”‚                            â”‚                         â”‚
 Render Diagnosis
 
 ---
 
 ## Features
 
-- **CKKS Homomorphic Encryption** — 128-bit security
-- **ResNet-18 Transfer Learning** — 89.42% test accuracy
-- **Zero plaintext exposure** — server never sees pixel data
-- **Real-time inference** — results in seconds
-- **Interactive UI** — drag-and-drop chest X-ray upload
-- **Pipeline visualization** — shows each encryption step
+- **CKKS Homomorphic Encryption** â€” 128-bit security
+- **ResNet-18 Transfer Learning** â€” 89.42% test accuracy
+- **Zero plaintext exposure** â€” server never sees pixel data
+- **Real-time inference** â€” results in seconds
+- **Interactive UI** â€” drag-and-drop chest X-ray upload
+- **Pipeline visualization** â€” shows each encryption step
 
 ---
 
 ## Project Structure
 SecureLens/
-├── app.py                          # Entry point
-├── requirements.txt
-├── README.md
-│
-├── crypto_layer/
-│   └── ckks_engine.py             # CKKS encryption/decryption
-│
-├── cloud_server/
-│   ├── server.py                  # Flask API
-│   ├── train_model.py             # Model training
-│   ├── models/                    # Saved weights
-│   └── encrypted_inference/
-│       └── he_inference.py        # HE inference engine
-│
-├── client/
-│   ├── templates/index.html       # Frontend UI
-│   └── static/
-│       ├── css/style.css
-│       └── js/main.js
-│
-├── utils/
-│   └── prepare_dataset.py
-│
-├── data/
-│   └── chest_xray/               # Kaggle dataset
-│       ├── train/
-│       ├── val/
-│       └── test/
-│
-└── tests/
-├── test_ckks.py
-├── test_inference.py
-└── test_api.py
+â”œâ”€â”€ app.py                          # Entry point
+â”œâ”€â”€ requirements.txt
+â”œâ”€â”€ README.md
+â”‚
+â”œâ”€â”€ crypto_layer/
+â”‚   â””â”€â”€ ckks_engine.py             # CKKS encryption/decryption
+â”‚
+â”œâ”€â”€ cloud_server/
+â”‚   â”œâ”€â”€ server.py                  # Flask API
+â”‚   â”œâ”€â”€ train_model.py             # Model training
+â”‚   â”œâ”€â”€ models/                    # Saved weights
+â”‚   â””â”€â”€ encrypted_inference/
+â”‚       â””â”€â”€ he_inference.py        # HE inference engine
+â”‚
+â”œâ”€â”€ client/
+â”‚   â”œâ”€â”€ templates/index.html       # Frontend UI
+â”‚   â””â”€â”€ static/
+â”‚       â”œâ”€â”€ css/style.css
+â”‚       â””â”€â”€ js/main.js
+â”‚
+â”œâ”€â”€ utils/
+â”‚   â””â”€â”€ prepare_dataset.py
+â”‚
+â”œâ”€â”€ data/
+â”‚   â””â”€â”€ chest_xray/               # Kaggle dataset
+â”‚       â”œâ”€â”€ train/
+â”‚       â”œâ”€â”€ val/
+â”‚       â””â”€â”€ test/
+â”‚
+â””â”€â”€ tests/
+â”œâ”€â”€ test_ckks.py
+â”œâ”€â”€ test_inference.py
+â””â”€â”€ test_api.py
 
 ---
 
@@ -194,8 +202,8 @@ pytest tests/ -v
 
 ## Results
 
-- Normal X-ray → correctly classified as **Normal**
-- Pneumonia X-ray → correctly classified as **Pneumonia**
+- Normal X-ray â†’ correctly classified as **Normal**
+- Pneumonia X-ray â†’ correctly classified as **Pneumonia**
 - All inference runs on **encrypted data**
 - Server has **zero access** to plaintext pixels
 
@@ -203,7 +211,8 @@ pytest tests/ -v
 
 ## Author
 
-**Amartya** — Final Year Student
+**Amartya** â€” Final Year Student
 Thesis: Privacy-Preserving Medical Image Diagnostics
          using Fully Homomorphic Encryption
+
 
