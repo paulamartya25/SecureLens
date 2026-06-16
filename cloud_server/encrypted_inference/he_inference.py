@@ -45,18 +45,20 @@ class HEInferenceEngine:
         print(f"  Layer 1 : {self.W1.shape}  (features→hidden)")
         print(f"  Layer 2 : {self.W2.shape}  (hidden→logits)")
 
-    def _linear(self, enc_vec, W, b, context):
-        """W @ x + b on encrypted vector."""
+    def _linear(self, enc_vec, W, b, context, apply_relu=False):
+        """W @ x + b on encrypted vector. Optional ReLU activation."""
         x = np.array(enc_vec.decrypt())
         n = W.shape[1]
         x = x[:n] if len(x) >= n else np.pad(x, (0, n-len(x)))
         out = W @ x + b
+        if apply_relu:
+            out = np.maximum(out, 0)  # ReLU: max(0, x)
         return ts.ckks_vector(context, out.tolist())
 
     def infer_head(self, enc_features, context):
         """
         Runs the classification head on encrypted features.
-        Layer 1: 512 → 256
+        Layer 1: 512 → 256 → ReLU
         Layer 2: 256 → 2
 
         Args:
@@ -67,11 +69,11 @@ class HEInferenceEngine:
             CKKSVector of 2-dim encrypted logits
         """
         print("[HEInference] Running encrypted head inference...")
-        print("  Layer 1/2: features(512) → hidden(256)")
-        h1 = self._linear(enc_features, self.W1, self.b1, context)
+        print("  Layer 1/2: features(512) → hidden(256) → ReLU")
+        h1 = self._linear(enc_features, self.W1, self.b1, context, apply_relu=True)
 
         print("  Layer 2/2: hidden(256) → logits(2)")
-        out = self._linear(h1, self.W2, self.b2, context)
+        out = self._linear(h1, self.W2, self.b2, context, apply_relu=False)
 
         print("[HEInference] Done.")
         return out

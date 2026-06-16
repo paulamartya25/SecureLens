@@ -1,472 +1,946 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>SecureLens — Live FHE Comparison</title>
-  <link rel="stylesheet" href="/static/css/style.css"/>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
   <style>
-    .sim-box{background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;padding:1.5rem;margin-bottom:1rem}
-    .progress-bar{height:8px;background:#2d3748;border-radius:99px;overflow:hidden;margin:6px 0}
-    .progress-fill{height:100%;border-radius:99px;transition:width 0.4s ease}
-    .step-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #2d3748;font-size:13px}
-    .step-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
-    .metric-live{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:1.5rem 0}
-    .metric-live-box{background:#1a1f2e;border:1px solid #2d3748;border-radius:10px;padding:1rem;text-align:center}
-    .metric-live-val{font-size:1.6rem;font-weight:700;margin:4px 0}
-    .metric-live-lbl{font-size:11px;color:#718096}
-    .tab-row{display:flex;gap:8px;margin-bottom:1.5rem;flex-wrap:wrap}
-    .tab-btn{padding:6px 16px;border-radius:99px;border:1px solid #4a5568;background:#2d3748;color:#a0aec0;cursor:pointer;font-size:13px;transition:all 0.2s}
-    .tab-btn.active{background:#2b6cb0;border-color:#2b6cb0;color:white}
-    .log-box{background:#0d1117;border:1px solid #2d3748;border-radius:8px;padding:1rem;font-family:monospace;font-size:12px;height:180px;overflow-y:auto;margin-top:1rem}
-    .log-line{padding:2px 0;color:#68d391}
-    .log-line.warn{color:#f6e05e}
-    .log-line.err{color:#fc8181}
-    .log-line.info{color:#63b3ed}
-    .comparison-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.5rem 0}
-    .comp-col{background:#1a1f2e;border-radius:10px;padding:1rem;border:1px solid #2d3748}
-    .comp-col.danger{border-color:#9b2c2c}
-    .comp-col.success{border-color:#276749}
-    .run-btn{width:100%;padding:12px;background:#2b6cb0;color:white;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:1rem;transition:background 0.2s}
-    .run-btn:hover{background:#3182ce}
-    .run-btn:disabled{background:#2d3748;color:#4a5568;cursor:not-allowed}
-    .badge-live{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600}
+    :root {
+      --bg: #020617;
+      --bg1: #06101f;
+      --bg2: #0a1628;
+      --card: #111d35;
+      --card2: #1a2742;
+
+      --teal: #00d4ff;
+      --emerald: #00ff88;
+      --purple: #7b61ff;
+      --red: #ff4d6d;
+      --yellow: #ffd166;
+
+      --white: #f0f4ff;
+      --muted: #94a3b8;
+      --muted2: #64748b;
+
+      --border: rgba(0, 212, 255, 0.16);
+      --font: "Inter", system-ui, sans-serif;
+      --mono: "Space Mono", monospace;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      font-family: var(--font);
+      color: var(--white);
+      background:
+        radial-gradient(circle at top left, rgba(0, 212, 255, 0.13), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(123, 97, 255, 0.16), transparent 35%),
+        linear-gradient(135deg, #020617 0%, #06101f 45%, #0a1628 100%);
+      overflow-x: hidden;
+    }
+
+    body {
+      min-height: 100vh;
+    }
+
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      background: transparent;
+    }
+
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 70px;
+      padding: 0 2.5rem;
+      background: rgba(2, 6, 23, 0.94);
+      backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+
+    .logo-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: rgba(0, 212, 255, 0.15);
+      border: 1px solid rgba(0, 212, 255, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      box-shadow: 0 0 20px rgba(0, 212, 255, 0.22);
+    }
+
+    .logo-name {
+      font-size: 1.18rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      background: linear-gradient(90deg, var(--teal), var(--emerald));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .logo-sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .back-link {
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--teal);
+      text-decoration: none;
+      border: 1px solid var(--border);
+      background: rgba(0, 212, 255, 0.05);
+      transition: all 0.2s ease;
+    }
+
+    .back-link:hover {
+      background: rgba(0, 212, 255, 0.12);
+      border-color: rgba(0, 212, 255, 0.4);
+    }
+
+    .main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 2.5rem 4rem;
+      background: transparent;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      padding: 10px 18px;
+      border-radius: 12px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.92);
+      color: var(--muted);
+      transition: all 0.2s ease;
+      font-family: var(--font);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .tab:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--white);
+    }
+
+    .tab.active {
+      background: linear-gradient(135deg, rgba(0, 212, 255, 0.22), rgba(0, 212, 255, 0.08));
+      color: var(--teal);
+      border-color: rgba(0, 212, 255, 0.45);
+      box-shadow: 0 0 24px rgba(0, 212, 255, 0.16);
+    }
+
+    .desc-line {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.7;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .run-btn {
+      width: 100%;
+      padding: 15px;
+      border-radius: 14px;
+      font-size: 0.98rem;
+      font-weight: 800;
+      cursor: pointer;
+      border: none;
+      background: linear-gradient(135deg, #0ea5e9, var(--teal));
+      color: #020617;
+      margin-bottom: 1.5rem;
+      transition: all 0.2s ease;
+      font-family: var(--font);
+      box-shadow: 0 0 28px rgba(0, 212, 255, 0.25);
+    }
+
+    .run-btn:hover:not(:disabled) {
+      box-shadow: 0 0 40px rgba(0, 212, 255, 0.42);
+      transform: translateY(-1px);
+    }
+
+    .run-btn:disabled {
+      background: var(--bg2);
+      color: var(--muted2);
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .compare-card {
+      background: rgba(10, 22, 40, 0.94);
+      border: 2px solid;
+      border-radius: 20px;
+      padding: 1.5rem;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+    }
+
+    .compare-card.danger {
+      border-color: rgba(255, 77, 109, 0.36);
+    }
+
+    .compare-card.safe {
+      border-color: rgba(0, 255, 136, 0.36);
+    }
+
+    .compare-card.running.danger {
+      box-shadow: 0 0 42px rgba(255, 77, 109, 0.18);
+    }
+
+    .compare-card.running.safe {
+      box-shadow: 0 0 42px rgba(0, 255, 136, 0.18);
+    }
+
+    .cc-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+
+    .cc-title {
+      font-size: 1.05rem;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .compare-card.danger .cc-title {
+      color: var(--red);
+    }
+
+    .compare-card.safe .cc-title {
+      color: var(--emerald);
+    }
+
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 800;
+      font-family: var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .status-idle {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+    }
+
+    .status-running {
+      background: rgba(255, 209, 102, 0.15);
+      color: var(--yellow);
+      animation: pulse 1s infinite;
+    }
+
+    .status-done {
+      background: rgba(0, 255, 136, 0.15);
+      color: var(--emerald);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.55; }
+    }
+
+    .step-list {
+      margin-bottom: 1.25rem;
+    }
+
+    .step-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.3s ease;
+    }
+
+    .step-row:last-child {
+      border-bottom: none;
+    }
+
+    .step-num {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.72rem;
+      font-weight: 800;
+      flex-shrink: 0;
+      transition: all 0.3s ease;
+      font-family: var(--mono);
+    }
+
+    .step-row.active .step-num {
+      background: var(--teal);
+      color: #020617;
+      box-shadow: 0 0 14px rgba(0, 212, 255, 0.55);
+    }
+
+    .step-row.done .step-num {
+      background: var(--emerald);
+      color: #020617;
+    }
+
+    .step-text {
+      font-size: 0.87rem;
+      color: var(--muted);
+      transition: color 0.3s ease;
+    }
+
+    .step-row.active .step-text {
+      color: var(--white);
+      font-weight: 700;
+    }
+
+    .step-row.done .step-text {
+      color: #cbd5e1;
+    }
+
+    .step-time {
+      font-size: 0.68rem;
+      color: var(--muted);
+      font-family: var(--mono);
+      margin-left: auto;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .step-row.done .step-time {
+      opacity: 1;
+    }
+
+    .progress-label {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-family: var(--mono);
+    }
+
+    .progress-track {
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.07);
+      overflow: hidden;
+      margin-bottom: 1.25rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    .compare-card.danger .progress-fill {
+      background: linear-gradient(90deg, #7f1d1d, var(--red));
+    }
+
+    .compare-card.safe .progress-fill {
+      background: linear-gradient(90deg, #166534, var(--emerald));
+    }
+
+    .stat-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat-box {
+      background: rgba(2, 6, 23, 0.72);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.9rem;
+      text-align: center;
+    }
+
+    .stat-lbl {
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+      font-family: var(--mono);
+    }
+
+    .stat-val {
+      font-size: 1.08rem;
+      font-weight: 900;
+      font-family: var(--mono);
+      color: var(--white);
+    }
+
+    .danger-txt {
+      color: var(--red);
+    }
+
+    .safe-txt {
+      color: var(--emerald);
+    }
+
+    .summary-bar {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 2.5rem 1rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-family: var(--mono);
+      text-align: center;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 1.5rem 2rem;
+      font-size: 0.68rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      font-family: var(--mono);
+      background: rgba(2, 6, 23, 0.92);
+    }
+
+    @media (max-width: 768px) {
+      .header {
+        padding: 0 1rem;
+      }
+
+      .main {
+        padding: 1.5rem 1rem 3rem;
+      }
+
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stat-row {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
+
 <body>
-<header class="header">
-  <div class="header-inner">
-    <div class="logo">
-      <span class="logo-icon">🔒</span>
-      <div><h1>SecureLens</h1><p>Live Before vs After FHE Comparison</p></div>
-    </div>
-    <a href="/" style="color:#63b3ed;text-decoration:none;font-size:0.9rem">← Back to Demo</a>
-  </div>
-</header>
+<canvas id="bg-canvas"></canvas>
 
-<main style="max-width:1100px;margin:2rem auto;padding:0 2rem">
+<div class="page">
 
-  <!-- Tab selector -->
-  <div class="tab-row">
-    <button class="tab-btn active" onclick="showTab('live')">🔴 Live Simulation</button>
-    <button class="tab-btn" onclick="showTab('metrics')">📊 Metrics</button>
-    <button class="tab-btn" onclick="showTab('security')">🔐 Security Analysis</button>
-    <button class="tab-btn" onclick="showTab('logs')">📋 System Logs</button>
-  </div>
-
-  <!-- ── TAB 1: Live Simulation ── -->
-  <div id="tab-live">
-    <p style="color:#718096;margin-bottom:1rem;font-size:14px">
-      Click Run to simulate both pipelines simultaneously and compare step-by-step execution.
-    </p>
-
-    <button class="run-btn" id="runBtn" onclick="runSimulation()">
-      ▶ Run Live Comparison
-    </button>
-
-    <div class="comparison-grid">
-      <!-- Without FHE -->
-      <div class="comp-col danger">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-          <span style="font-weight:600;color:#fc8181">🔓 Without FHE</span>
-          <span class="badge-live" id="badge-plain" style="background:#2d1515;color:#fc8181">Idle</span>
-        </div>
-        <div id="steps-plain"></div>
-        <div style="margin-top:1rem">
-          <div style="font-size:12px;color:#718096;margin-bottom:4px">Pipeline progress</div>
-          <div class="progress-bar"><div class="progress-fill" id="prog-plain" style="width:0%;background:#fc8181"></div></div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:1rem">
-          <div style="background:#0d1117;border-radius:6px;padding:8px;text-align:center">
-            <div style="font-size:11px;color:#718096">Latency</div>
-            <div style="font-size:16px;font-weight:600;color:#e2e8f0" id="lat-plain">—</div>
-          </div>
-          <div style="background:#0d1117;border-radius:6px;padding:8px;text-align:center">
-            <div style="font-size:11px;color:#718096">Data exposed</div>
-            <div style="font-size:16px;font-weight:600;color:#fc8181" id="exp-plain">—</div>
-          </div>
-        </div>
+  <header class="header">
+    <a href="/" class="logo">
+      <div class="logo-mark">🔒</div>
+      <div>
+        <div class="logo-name">SecureLens</div>
+        <div class="logo-sub">Live Before vs After FHE Comparison</div>
       </div>
+    </a>
 
-      <!-- With FHE -->
-      <div class="comp-col success">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-          <span style="font-weight:600;color:#68d391">🔒 SecureLens (FHE)</span>
-          <span class="badge-live" id="badge-fhe" style="background:#0d2e1a;color:#68d391">Idle</span>
-        </div>
-        <div id="steps-fhe"></div>
-        <div style="margin-top:1rem">
-          <div style="font-size:12px;color:#718096;margin-bottom:4px">Pipeline progress</div>
-          <div class="progress-bar"><div class="progress-fill" id="prog-fhe" style="width:0%;background:#68d391"></div></div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:1rem">
-          <div style="background:#0d1117;border-radius:6px;padding:8px;text-align:center">
-            <div style="font-size:11px;color:#718096">Latency</div>
-            <div style="font-size:16px;font-weight:600;color:#e2e8f0" id="lat-fhe">—</div>
-          </div>
-          <div style="background:#0d1117;border-radius:6px;padding:8px;text-align:center">
-            <div style="font-size:11px;color:#718096">Data exposed</div>
-            <div style="font-size:16px;font-weight:600;color:#68d391" id="exp-fhe">—</div>
-          </div>
-        </div>
-      </div>
+    <a href="/" class="back-link">← Back to Demo</a>
+  </header>
+
+  <main class="main">
+
+    <div class="tabs">
+      <div class="tab active" id="tabSim" onclick="switchTab('sim')">🔴 Live Simulation</div>
+      <div class="tab" id="tabMetrics" onclick="switchTab('metrics')">📊 Metrics</div>
+      <div class="tab" id="tabSecurity" onclick="switchTab('security')">🔐 Security Analysis</div>
+      <div class="tab" id="tabLogs" onclick="switchTab('logs')">📋 System Logs</div>
     </div>
 
-    <!-- Result banner -->
-    <div id="result-banner" style="display:none;padding:1.5rem;background:#0d2037;border:1px solid #1a3a5c;border-radius:10px;margin-top:1rem">
-      <h3 style="color:#63b3ed;margin-bottom:0.5rem">Simulation Complete</h3>
-      <p style="color:#e2e8f0;font-size:14px;line-height:1.7" id="result-text"></p>
-    </div>
-  </div>
+    <div class="tab-panel active" id="panelSim">
+      <p class="desc-line">
+        Click Run to simulate both pipelines simultaneously and compare step-by-step execution.
+      </p>
 
-  <!-- ── TAB 2: Metrics ── -->
-  <div id="tab-metrics" style="display:none">
-    <div class="metric-live">
-      <div class="metric-live-box">
-        <div class="metric-live-lbl">Accuracy loss after FHE</div>
-        <div class="metric-live-val" style="color:#68d391">0%</div>
-        <div class="metric-live-lbl">Identical performance</div>
-      </div>
-      <div class="metric-live-box">
-        <div class="metric-live-lbl">Data exposure risk</div>
-        <div class="metric-live-val" style="color:#68d391">0%</div>
-        <div class="metric-live-lbl">Was 100% without FHE</div>
-      </div>
-      <div class="metric-live-box">
-        <div class="metric-live-lbl">Security level</div>
-        <div class="metric-live-val" style="color:#63b3ed">128-bit</div>
-        <div class="metric-live-lbl">CKKS cryptographic</div>
-      </div>
-      <div class="metric-live-box">
-        <div class="metric-live-lbl">Decryption error</div>
-        <div class="metric-live-val" style="color:#68d391">7×10⁻⁸</div>
-        <div class="metric-live-lbl">Negligible noise</div>
-      </div>
-    </div>
-
-    <div style="position:relative;width:100%;height:280px;margin-bottom:1rem">
-      <canvas id="metricsChart" role="img" aria-label="Grouped bar chart comparing without FHE vs with FHE across accuracy, privacy, risk and overhead">Accuracy same, privacy 0 vs 100, risk 100 vs 0, overhead 0 vs 33.</canvas>
-    </div>
-
-    <div style="position:relative;width:100%;height:260px">
-      <canvas id="latencyChart" role="img" aria-label="Bar chart showing latency comparison: without FHE 0.5s, with FHE 2.5s">Without FHE 0.5s, with FHE 2.5s.</canvas>
-    </div>
-  </div>
-
-  <!-- ── TAB 3: Security Analysis ── -->
-  <div id="tab-security" style="display:none">
-    <div class="sim-box">
-      <h3 style="color:#63b3ed;margin-bottom:1rem;font-size:14px">CKKS Parameter Security Analysis</h3>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-        <div style="background:#0d1117;border-radius:8px;padding:12px">
-          <div style="font-size:11px;color:#718096">Poly modulus degree</div>
-          <div style="font-size:18px;font-weight:600;color:#63b3ed">8192</div>
-          <div style="font-size:11px;color:#276749">✓ 128-bit security</div>
-        </div>
-        <div style="background:#0d1117;border-radius:8px;padding:12px">
-          <div style="font-size:11px;color:#718096">Global scale</div>
-          <div style="font-size:18px;font-weight:600;color:#63b3ed">2⁴⁰</div>
-          <div style="font-size:11px;color:#276749">✓ High precision</div>
-        </div>
-        <div style="background:#0d1117;border-radius:8px;padding:12px">
-          <div style="font-size:11px;color:#718096">Coeff modulus</div>
-          <div style="font-size:18px;font-weight:600;color:#63b3ed">[60,40,40,60]</div>
-          <div style="font-size:11px;color:#276749">✓ 3 mult levels</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="sim-box">
-      <h3 style="color:#63b3ed;margin-bottom:1rem;font-size:14px">Threat Model — What FHE Protects Against</h3>
-      <div id="threatList"></div>
-    </div>
-
-    <div class="sim-box">
-      <h3 style="color:#63b3ed;margin-bottom:1rem;font-size:14px">Run Security Self-Test</h3>
-      <button class="run-btn" id="secBtn" onclick="runSecurityTest()" style="margin-bottom:0">
-        🔐 Run CKKS Security Test
+      <button class="run-btn" id="runBtn" onclick="runSimulation()">
+        ▶ Run Live Comparison
       </button>
-      <div class="log-box" id="sec-log" style="display:none"></div>
-    </div>
-  </div>
 
-  <!-- ── TAB 4: System Logs ── -->
-  <div id="tab-logs" style="display:none">
-    <div class="sim-box">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-        <h3 style="color:#63b3ed;font-size:14px">Live Server Logs</h3>
-        <div style="display:flex;gap:8px">
-          <button onclick="clearLogs()" style="padding:4px 12px;background:#2d3748;border:1px solid #4a5568;border-radius:6px;color:#e2e8f0;cursor:pointer;font-size:12px">Clear</button>
-          <button onclick="fetchLogs()" style="padding:4px 12px;background:#2b6cb0;border:none;border-radius:6px;color:white;cursor:pointer;font-size:12px">Refresh</button>
+      <div class="compare-grid">
+
+        <div class="compare-card danger" id="cardLeft">
+          <div class="cc-header">
+            <div class="cc-title">🔓 Without FHE</div>
+            <span class="status-badge status-idle" id="statusLeft">Idle</span>
+          </div>
+
+          <div class="step-list" id="stepsLeft">
+            <div class="step-row" data-step="1">
+              <div class="step-num">1</div>
+              <div class="step-text">Upload X-ray image</div>
+              <div class="step-time"></div>
+            </div>
+            <div class="step-row" data-step="2">
+              <div class="step-num">2</div>
+              <div class="step-text">Send raw pixels to server</div>
+              <div class="step-time"></div>
+            </div>
+            <div class="step-row" data-step="3">
+              <div class="step-num">3</div>
+              <div class="step-text">Server reads plaintext</div>
+              <div class="step-time"></div>
+            </div>
+            <div class="step-row" data-step="4">
+              <div class="step-num">4</div>
+              <div class="step-text">CNN runs on raw data</div>
+              <div class="step-time"></div>
+            </div>
+            <div class="step-row" data-step="5">
+              <div class="step-num">5</div>
+              <div class="step-text">Prediction returned</div>
+              <div class="step-time"></div>
+            </div>
+          </div>
+
+          <div class="progress-label">Pipeline progress</div>
+          <div class="progress-track">
+            <div class="progress-fill" id="progLeft"></div>
+          </div>
+
+          <div class="stat-row">
+            <div class="stat-box">
+              <div class="stat-lbl">Latency</div>
+              <div class="stat-val" id="latLeft">—</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-lbl">Data exposed</div>
+              <div class="stat-val danger-txt" id="expLeft">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="compare-card safe" id="cardRight">
+          <div class="cc-header">
+            <div class="cc-title">🔒 SecureLens (FHE)</div>
+            <span class="status-badge status-idle" id="statusRight">Idle</span>
+          </div>
+
+          <div class="step-list" id="stepsRight">
+            <div class="step-row" data-step="1">
+              <div class="step-num">1</div>
+              <div class="step-text">Upload X-ray image</div>
+              <div class="step-time"></div>
+            </div>
+            <div class="step-row" data-step="2">
+              <div class="step-num">2</div>
+              <div class="step-text">ResNet extracts 512-dim features</div>
+              <div class="step-time"></div>
+            </div>
+            <div class="step-row" data-step="3">
+              <div class="step-num">3</div>
+              <div class="step-text">Features encrypted via CKKS</div>
+              <div class="step-time"></div>
+            </div>
+            <div class="step-row" data-step="4">
+              <div class="step-num">4</div>
+              <div class="step-text">Server computes on ciphertext</div>
+              <div class="step-time"></div>
+            </div>
+            <div class="step-row" data-step="5">
+              <div class="step-num">5</div>
+              <div class="step-text">Client decrypts result locally</div>
+              <div class="step-time"></div>
+            </div>
+          </div>
+
+          <div class="progress-label">Pipeline progress</div>
+          <div class="progress-track">
+            <div class="progress-fill" id="progRight"></div>
+          </div>
+
+          <div class="stat-row">
+            <div class="stat-box">
+              <div class="stat-lbl">Latency</div>
+              <div class="stat-val" id="latRight">—</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-lbl">Data exposed</div>
+              <div class="stat-val safe-txt" id="expRight">0 bytes</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="tab-panel" id="panelMetrics">
+      <div class="compare-grid">
+
+        <div class="compare-card danger">
+          <div class="cc-header">
+            <div class="cc-title">🔓 Without FHE</div>
+          </div>
+          <div class="stat-row" style="grid-template-columns:1fr">
+            <div class="stat-box">
+              <div class="stat-lbl">Privacy risk</div>
+              <div class="stat-val danger-txt">100%</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-lbl">Server sees</div>
+              <div class="stat-val danger-txt">Full plaintext vector</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-lbl">Accuracy</div>
+              <div class="stat-val">89.42%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="compare-card safe">
+          <div class="cc-header">
+            <div class="cc-title">🔒 SecureLens (FHE)</div>
+          </div>
+          <div class="stat-row" style="grid-template-columns:1fr">
+            <div class="stat-box">
+              <div class="stat-lbl">Privacy risk</div>
+              <div class="stat-val safe-txt">0%</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-lbl">Server sees</div>
+              <div class="stat-val safe-txt">326 KB ciphertext only</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-lbl">Accuracy</div>
+              <div class="stat-val safe-txt">89.42% (0% loss)</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="tab-panel" id="panelSecurity">
+      <div class="compare-card safe" style="max-width:100%">
+        <div class="cc-header">
+          <div class="cc-title">🔐 CKKS Security Parameters</div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-box">
+            <div class="stat-lbl">Scheme</div>
+            <div class="stat-val">CKKS</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-lbl">Security level</div>
+            <div class="stat-val safe-txt">128-bit</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-lbl">Poly modulus</div>
+            <div class="stat-val">8192</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-lbl">Global scale</div>
+            <div class="stat-val">2^40</div>
+          </div>
         </div>
       </div>
-      <div class="log-box" id="main-log">
-        <div class="log-line info">[System] SecureLens initialized</div>
-        <div class="log-line">[CKKS] Context created — poly_modulus: 8192</div>
-        <div class="log-line">[CKKS] Scale: 2^40 | Security: 128-bit</div>
-        <div class="log-line info">[Model] ResNet-18 weights loaded</div>
-        <div class="log-line">[HE] Layer 1: (256, 512) | Layer 2: (2, 256)</div>
-        <div class="log-line">[Server] Flask API ready at port 5000</div>
-        <div class="log-line info">[Health] All systems operational</div>
+    </div>
+
+    <div class="tab-panel" id="panelLogs">
+      <div class="compare-card safe" style="max-width:100%">
+        <div class="cc-header">
+          <div class="cc-title">📋 System Logs</div>
+        </div>
+
+        <p style="font-size:0.78rem;color:var(--muted);font-family:var(--mono)">
+          Run the simulation to see live logs appear here.
+        </p>
+
+        <div id="logOutput" style="margin-top:1rem;font-family:var(--mono);font-size:0.72rem;color:#94a3b8;line-height:1.8"></div>
       </div>
     </div>
 
-    <div class="sim-box">
-      <h3 style="color:#63b3ed;margin-bottom:1rem;font-size:14px">API Health Check</h3>
-      <button class="run-btn" onclick="checkHealth()" style="margin-bottom:0.5rem">
-        🩺 Check Server Health
-      </button>
-      <div id="health-result" style="display:none;background:#0d1117;border-radius:8px;padding:1rem;font-family:monospace;font-size:12px;color:#68d391;margin-top:0.5rem"></div>
-    </div>
+  </main>
+
+  <div class="summary-bar">
+    SecureLens — Final Year Thesis | CKKS FHE | TenSEAL | PyTorch
   </div>
 
-</main>
+  <footer class="footer">
+    SecureLens · CKKS Fully Homomorphic Encryption · TenSEAL · PyTorch · ResNet-18
+  </footer>
 
-<footer class="footer">
-  <p>SecureLens — Final Year Thesis | CKKS FHE | TenSEAL | PyTorch</p>
-</footer>
+</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-const PLAIN_STEPS = [
-  {label:"Upload X-ray image",        safe:true},
-  {label:"Send raw pixels to server", safe:false},
-  {label:"Server reads plaintext",    safe:false},
-  {label:"CNN runs on raw data",       safe:false},
-  {label:"Prediction returned",        safe:true},
-];
-const FHE_STEPS = [
-  {label:"Upload X-ray image",              safe:true},
-  {label:"ResNet extracts 512-dim features",safe:true},
-  {label:"Features encrypted via CKKS",     safe:true},
-  {label:"Server computes on ciphertext",   safe:true},
-  {label:"Client decrypts result locally",  safe:true},
-];
-const THREATS = [
-  {threat:"Server-side data breach",     without:"Full X-ray exposed",       with:"Ciphertext only — useless"},
-  {threat:"Network interception (MITM)", without:"Raw pixels readable",      with:"Encrypted blob — unreadable"},
-  {threat:"Insider threat",              without:"Staff can view images",     with:"No plaintext ever on server"},
-  {threat:"Cloud provider access",       without:"Full image access",        with:"Zero plaintext access"},
-  {threat:"Regulatory (HIPAA/DPDP)",     without:"Non-compliant by default", with:"Compliant — data never exposed"},
-];
+  const bgCanvas = document.getElementById("bg-canvas");
+  const bgCtx = bgCanvas.getContext("2d");
 
-function showTab(t) {
-  ["live","metrics","security","logs"].forEach(id => {
-    document.getElementById("tab-"+id).style.display = id===t?"block":"none";
-  });
-  document.querySelectorAll(".tab-btn").forEach((b,i) => {
-    b.classList.toggle("active", ["live","metrics","security","logs"][i]===t);
-  });
-  if(t==="metrics") drawCharts();
-  if(t==="security") drawThreats();
-}
+  let canvasW;
+  let canvasH;
+  let points = [];
 
-function makeSteps(containerId, steps, allGray=true) {
-  const c = document.getElementById(containerId);
-  c.innerHTML = steps.map((s,i) => `
-    <div class="step-row" id="${containerId}-step-${i}">
-      <div class="step-icon" style="background:${allGray?'#2d3748':'#2d3748'};color:#718096">
-        ${i+1}
-      </div>
-      <span style="color:#718096">${s.label}</span>
-    </div>`).join("");
-}
-
-async function runSimulation() {
-  const btn = document.getElementById("runBtn");
-  btn.disabled = true;
-  btn.textContent = "⏳ Running...";
-  document.getElementById("result-banner").style.display = "none";
-
-  makeSteps("steps-plain", PLAIN_STEPS);
-  makeSteps("steps-fhe",   FHE_STEPS);
-  document.getElementById("prog-plain").style.width = "0%";
-  document.getElementById("prog-fhe").style.width   = "0%";
-  document.getElementById("lat-plain").textContent  = "—";
-  document.getElementById("lat-fhe").textContent    = "—";
-  document.getElementById("exp-plain").textContent  = "—";
-  document.getElementById("exp-fhe").textContent    = "—";
-  document.getElementById("badge-plain").textContent = "Running";
-  document.getElementById("badge-fhe").textContent   = "Running";
-
-  const plainStart = Date.now();
-  const fheStart   = Date.now();
-
-  for(let i=0;i<PLAIN_STEPS.length;i++){
-    await sleep(400);
-    const row  = document.getElementById(`steps-plain-step-${i}`);
-    const icon = row.querySelector(".step-icon");
-    const s    = PLAIN_STEPS[i];
-    icon.style.background = s.safe ? "#1a3a5c" : "#2d1515";
-    icon.style.color      = s.safe ? "#63b3ed" : "#fc8181";
-    icon.textContent      = s.safe ? "✓" : "⚠";
-    row.querySelector("span").style.color = s.safe ? "#e2e8f0" : "#fc8181";
-    document.getElementById("prog-plain").style.width = ((i+1)/PLAIN_STEPS.length*100)+"%";
+  function resizeCanvas() {
+    canvasW = bgCanvas.width = window.innerWidth;
+    canvasH = bgCanvas.height = window.innerHeight;
   }
-  const plainMs = Date.now() - plainStart;
-  document.getElementById("lat-plain").textContent  = (plainMs/1000).toFixed(2)+"s (sim)";
-  document.getElementById("exp-plain").textContent  = "100% pixels";
-  document.getElementById("badge-plain").textContent = "Done";
-  document.getElementById("badge-plain").style.background = "#2d1515";
 
-  await sleep(200);
+  resizeCanvas();
+  window.addEventListener("resize", resizeCanvas);
 
-  for(let i=0;i<FHE_STEPS.length;i++){
-    await sleep(550);
-    const row  = document.getElementById(`steps-fhe-step-${i}`);
-    const icon = row.querySelector(".step-icon");
-    icon.style.background = "#0d2e1a";
-    icon.style.color      = "#68d391";
-    icon.textContent      = "✓";
-    row.querySelector("span").style.color = "#e2e8f0";
-    document.getElementById("prog-fhe").style.width = ((i+1)/FHE_STEPS.length*100)+"%";
-  }
-  const fheMs = Date.now() - fheStart;
-  document.getElementById("lat-fhe").textContent  = (fheMs/1000).toFixed(2)+"s (sim)";
-  document.getElementById("exp-fhe").textContent  = "0 bytes";
-  document.getElementById("badge-fhe").textContent = "Secure";
-  document.getElementById("badge-fhe").style.background = "#0d2e1a";
+  class Particle {
+    constructor() {
+      this.reset();
+    }
 
-  document.getElementById("result-text").textContent =
-    "Simulation complete. Without FHE: server received and processed raw X-ray pixels — " +
-    "any breach would expose patient data. With SecureLens FHE: server received only a " +
-    "CKKS ciphertext and returned an encrypted result. Diagnostic accuracy remained " +
-    "identical at 89.42% with zero plaintext exposure.";
-  document.getElementById("result-banner").style.display = "block";
+    reset() {
+      this.x = Math.random() * canvasW;
+      this.y = Math.random() * canvasH;
+      this.vx = (Math.random() - 0.5) * 0.25;
+      this.vy = (Math.random() - 0.5) * 0.25;
+      this.r = Math.random() * 1.2 + 0.3;
+      this.a = Math.random() * 0.3 + 0.05;
+      this.c = Math.random() < 0.5 ? "0,212,255" : "0,255,136";
+    }
 
-  btn.disabled = false;
-  btn.textContent = "▶ Run Again";
-}
+    tick() {
+      this.x += this.vx;
+      this.y += this.vy;
 
-let chartsDrawn = false;
-function drawCharts() {
-  if(chartsDrawn) return;
-  chartsDrawn = true;
-
-  new Chart(document.getElementById("metricsChart"),{
-    type:"bar",
-    data:{
-      labels:["Accuracy","Privacy score","Data exposure risk","CT overhead (norm.)"],
-      datasets:[
-        {label:"Without FHE", data:[89.42,0,100,0],   backgroundColor:"#E24B4A",borderWidth:0},
-        {label:"With FHE",    data:[89.42,100,0,33],  backgroundColor:"#1D9E75",borderWidth:0}
-      ]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{callbacks:{label:c=>c.dataset.label+": "+c.parsed.y.toFixed(1)+"%"}}
-      },
-      scales:{
-        x:{ticks:{color:"#a0aec0",font:{size:11}},grid:{display:false}},
-        y:{min:0,max:110,ticks:{callback:v=>v+"%",color:"#a0aec0",font:{size:10}},grid:{color:"rgba(255,255,255,0.05)"}}
+      if (this.x < 0 || this.x > canvasW || this.y < 0 || this.y > canvasH) {
+        this.reset();
       }
     }
-  });
 
-  new Chart(document.getElementById("latencyChart"),{
-    type:"bar",
-    data:{
-      labels:["Upload","Feature Extract","Encrypt","Inference","Decrypt","Total"],
-      datasets:[
-        {label:"Without FHE",data:[0.1,0,0,0.4,0,0.5],   backgroundColor:"#E24B4A",borderWidth:0},
-        {label:"With FHE",   data:[0.1,0.3,0.8,0.8,0.5,2.5],backgroundColor:"#1D9E75",borderWidth:0}
-      ]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+": "+c.parsed.y.toFixed(1)+"s"}}},
-      scales:{
-        x:{ticks:{color:"#a0aec0",font:{size:11}},grid:{display:false}},
-        y:{min:0,ticks:{callback:v=>v+"s",color:"#a0aec0",font:{size:10}},grid:{color:"rgba(255,255,255,0.05)"}}
+    draw() {
+      bgCtx.beginPath();
+      bgCtx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+      bgCtx.fillStyle = `rgba(${this.c},${this.a})`;
+      bgCtx.fill();
+    }
+  }
+
+  for (let i = 0; i < 80; i++) {
+    points.push(new Particle());
+  }
+
+  function connectParticles() {
+    for (let i = 0; i < points.length; i++) {
+      for (let j = i + 1; j < points.length; j++) {
+        const dx = points[i].x - points[j].x;
+        const dy = points[i].y - points[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+
+        if (d < 110) {
+          bgCtx.beginPath();
+          bgCtx.moveTo(points[i].x, points[i].y);
+          bgCtx.lineTo(points[j].x, points[j].y);
+          bgCtx.strokeStyle = `rgba(0,212,255,${0.05 * (1 - d / 110)})`;
+          bgCtx.lineWidth = 0.5;
+          bgCtx.stroke();
+        }
       }
     }
-  });
-}
-
-function drawThreats() {
-  const c = document.getElementById("threatList");
-  if(c.innerHTML) return;
-  c.innerHTML = THREATS.map(t=>`
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:8px 0;border-bottom:1px solid #2d3748;font-size:12px">
-      <div style="color:#a0aec0;font-weight:500">${t.threat}</div>
-      <div style="color:#fc8181">✗ ${t.without}</div>
-      <div style="color:#68d391">✓ ${t.with}</div>
-    </div>`).join("");
-}
-
-async function runSecurityTest() {
-  const log = document.getElementById("sec-log");
-  const btn = document.getElementById("secBtn");
-  log.style.display = "block";
-  log.innerHTML = "";
-  btn.disabled = true;
-
-  const lines = [
-    {t:"info", m:"[CKKS] Initializing security test..."},
-    {t:"", m:"[CKKS] poly_modulus_degree = 8192 → 128-bit security ✓"},
-    {t:"", m:"[CKKS] global_scale = 2^40 → ~10 decimal digits precision ✓"},
-    {t:"", m:"[CKKS] coeff_mod_bit_sizes = [60,40,40,60] → 3 levels ✓"},
-    {t:"info", m:"[Key] Generating Galois keys..."},
-    {t:"", m:"[Key] Galois keys generated ✓"},
-    {t:"", m:"[Key] Relin keys generated ✓"},
-    {t:"info", m:"[Test] Encrypting sample vector..."},
-    {t:"", m:"[Test] Vector encrypted → ciphertext size: 326 KB ✓"},
-    {t:"", m:"[Test] Same plaintext → different ciphertexts (probabilistic) ✓"},
-    {t:"info", m:"[Test] Homomorphic multiply by 0.5..."},
-    {t:"", m:"[Test] Decrypt error: 7.19e-08 < 1e-03 ✓"},
-    {t:"", m:"[Test] Serialization round-trip error: 7.05e-09 ✓"},
-    {t:"", m:"[Security] No plaintext exposed during computation ✓"},
-    {t:"", m:"[Security] Secret key held by client only ✓"},
-    {t:"info", m:"✅ All security tests passed."},
-  ];
-
-  for(const l of lines){
-    await sleep(220);
-    const d = document.createElement("div");
-    d.className = "log-line "+(l.t||"");
-    d.textContent = l.m;
-    log.appendChild(d);
-    log.scrollTop = log.scrollHeight;
   }
-  btn.disabled = false;
-  btn.textContent = "✅ Security Test Passed — Run Again";
-}
 
-async function checkHealth() {
-  const box = document.getElementById("health-result");
-  box.style.display = "block";
-  box.textContent = "Checking...";
-  try {
-    const r = await fetch("/health");
-    const d = await r.json();
-    box.textContent = JSON.stringify(d, null, 2);
-    box.style.color = d.status==="ok" ? "#68d391" : "#fc8181";
-  } catch(e) {
-    box.textContent = "Error: "+e.message;
-    box.style.color = "#fc8181";
+  function animateBackground() {
+    bgCtx.clearRect(0, 0, canvasW, canvasH);
+    points.forEach(p => {
+      p.tick();
+      p.draw();
+    });
+    connectParticles();
+    requestAnimationFrame(animateBackground);
   }
-}
 
-function clearLogs(){
-  document.getElementById("main-log").innerHTML =
-    '<div class="log-line info">[System] Logs cleared.</div>';
-}
+  animateBackground();
 
-async function fetchLogs(){
-  const box = document.getElementById("main-log");
-  const d = document.createElement("div");
-  d.className = "log-line info";
-  d.textContent = "[System] Log refresh at "+new Date().toLocaleTimeString();
-  box.appendChild(d);
-  box.scrollTop = box.scrollHeight;
-}
+  function switchTab(name) {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
 
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+    const tabMap = {
+      sim: "tabSim",
+      metrics: "tabMetrics",
+      security: "tabSecurity",
+      logs: "tabLogs",
+    };
 
-makeSteps("steps-plain", PLAIN_STEPS);
-makeSteps("steps-fhe",   FHE_STEPS);
+    const panelMap = {
+      sim: "panelSim",
+      metrics: "panelMetrics",
+      security: "panelSecurity",
+      logs: "panelLogs",
+    };
+
+    document.getElementById(tabMap[name]).classList.add("active");
+    document.getElementById(panelMap[name]).classList.add("active");
+  }
+
+  let running = false;
+
+  async function runSimulation() {
+    if (running) return;
+
+    running = true;
+
+    const btn = document.getElementById("runBtn");
+    btn.disabled = true;
+    btn.textContent = "⏳ Running simulation...";
+
+    resetCard("Left");
+    resetCard("Right");
+
+    setStatus("Left", "running");
+    setStatus("Right", "running");
+
+    document.getElementById("cardLeft").classList.add("running");
+    document.getElementById("cardRight").classList.add("running");
+
+    const log = document.getElementById("logOutput");
+    log.innerHTML = "";
+
+    const leftTimes = [40, 180, 60, 220, 30];
+    const rightTimes = [40, 310, 95, 280, 45];
+
+    let leftTotal = 0;
+    let rightTotal = 0;
+
+    for (let i = 1; i <= 5; i++) {
+      await Promise.all([
+        stepThrough("Left", i, leftTimes[i - 1]),
+        stepThrough("Right", i, rightTimes[i - 1]),
+      ]);
+
+      leftTotal += leftTimes[i - 1];
+      rightTotal += rightTimes[i - 1];
+
+      document.getElementById("progLeft").style.width = `${(i / 5) * 100}%`;
+      document.getElementById("progRight").style.width = `${(i / 5) * 100}%`;
+
+      log.innerHTML += `<div>[${leftTotal}ms] Without-FHE step ${i} complete</div>`;
+      log.innerHTML += `<div>[${rightTotal}ms] SecureLens step ${i} complete</div>`;
+    }
+
+    document.getElementById("latLeft").textContent = `${leftTotal} ms`;
+    document.getElementById("latRight").textContent = `${rightTotal} ms`;
+
+    document.getElementById("expLeft").textContent = "4 KB plaintext";
+    document.getElementById("expRight").textContent = "0 bytes";
+
+    setStatus("Left", "done");
+    setStatus("Right", "done");
+
+    document.getElementById("cardLeft").classList.remove("running");
+    document.getElementById("cardRight").classList.remove("running");
+
+    btn.disabled = false;
+    btn.textContent = "▶ Run Again";
+
+    running = false;
+  }
+
+  function resetCard(side) {
+    document.querySelectorAll(`#steps${side} .step-row`).forEach(row => {
+      row.classList.remove("active", "done");
+      row.querySelector(".step-time").textContent = "";
+    });
+
+    document.getElementById(`prog${side}`).style.width = "0%";
+    document.getElementById(`lat${side}`).textContent = "—";
+
+    setStatus(side, "idle");
+  }
+
+  function setStatus(side, state) {
+    const el = document.getElementById(`status${side}`);
+
+    el.className = `status-badge status-${state}`;
+
+    if (state === "idle") {
+      el.textContent = "Idle";
+    } else if (state === "running") {
+      el.textContent = "Running";
+    } else {
+      el.textContent = "Done";
+    }
+  }
+
+  function stepThrough(side, stepNumber, ms) {
+    return new Promise(resolve => {
+      const row = document.querySelector(`#steps${side} .step-row[data-step="${stepNumber}"]`);
+
+      row.classList.add("active");
+
+      setTimeout(() => {
+        row.classList.remove("active");
+        row.classList.add("done");
+        row.querySelector(".step-time").textContent = `${ms}ms`;
+        resolve();
+      }, ms);
+    });
+  }
 </script>
+
 </body>
 </html>

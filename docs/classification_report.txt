@@ -1,4 +1,4 @@
-SecureLens — Classification Report
+SecureLens â€” Classification Report
 ========================================
               precision    recall  f1-score   support
 

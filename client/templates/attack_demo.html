@@ -3,298 +3,615 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SecureLens — FHE Attack Demo</title>
-  <link rel="stylesheet" href="/static/css/style.css"/>
+  <title>SecureLens — FHE Attack Significance Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    .attack-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin:1.5rem 0}
-    .attack-col{background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;padding:1.25rem}
-    .attack-col.original{border-color:#2b6cb0}
-    .attack-col.danger{border-color:#9b2c2c}
-    .attack-col.success{border-color:#276749}
-    .img-box{width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#0d1117;margin-bottom:0.75rem;display:flex;align-items:center;justify-content:center}
-    .img-box img{width:100%;height:100%;object-fit:contain}
-    .verdict-sm{text-align:center;padding:0.75rem;border-radius:8px;margin-bottom:0.5rem}
-    .verdict-sm.normal{background:#0d2e1a;border:1px solid #276749}
-    .verdict-sm.pneumonia{background:#2d1515;border:1px solid #9b2c2c}
-    .verdict-sm.unknown{background:#1a1f2e;border:1px solid #4a5568}
-    .attack-btn{padding:8px 14px;border-radius:8px;border:1px solid #4a5568;background:#2d3748;color:#e2e8f0;cursor:pointer;font-size:12px;transition:all 0.2s;width:100%;margin-bottom:6px}
-    .attack-btn:hover{background:#4a5568}
-    .attack-btn.active{background:#2b6cb0;border-color:#2b6cb0;color:white}
-    .run-btn{width:100%;padding:14px;background:#2b6cb0;color:white;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:background 0.2s;margin:1rem 0}
-    .run-btn:hover:not(:disabled){background:#3182ce}
-    .run-btn:disabled{background:#2d3748;color:#4a5568;cursor:not-allowed}
-    .upload-zone{border:2px dashed #4a5568;border-radius:10px;padding:1.5rem;text-align:center;cursor:pointer;transition:all 0.3s;margin-bottom:1rem}
-    .upload-zone:hover,.upload-zone.has-file{border-color:#63b3ed;background:#0d2037}
-    .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px}
-    .bar-track{flex:1;height:8px;background:#2d3748;border-radius:99px;overflow:hidden}
-    .bar-fill{height:100%;border-radius:99px;transition:width 0.6s ease}
-    .sig-box{padding:1.25rem;border-radius:10px;margin-top:1rem;border:1px solid}
-    .sig-box.protected{background:#0d2037;border-color:#1a3a5c}
-    .sig-box.danger{background:#2d1515;border-color:#9b2c2c}
-    .step-indicator{display:flex;gap:4px;margin-bottom:1rem;flex-wrap:wrap}
-    .step-dot{padding:4px 10px;border-radius:99px;font-size:11px;background:#2d3748;color:#718096;border:1px solid #4a5568}
-    .step-dot.active{background:#2b6cb0;color:white;border-color:#2b6cb0}
-    .step-dot.done{background:#276749;color:white;border-color:#276749}
-    .step-dot.warn{background:#9b2c2c;color:white;border-color:#9b2c2c}
+    :root {
+      --bg:      #050A14;
+      --bg1:     #0A1628;
+      --bg2:     #111D35;
+      --teal:    #00D4FF;
+      --emerald: #00FF88;
+      --purple:  #7B61FF;
+      --red:     #FF4D6D;
+      --yellow:  #FFD166;
+      --white:   #F0F4FF;
+      --muted:   #4A6080;
+      --border:  rgba(0,212,255,0.12);
+      --font:    'Inter', system-ui, sans-serif;
+      --mono:    'Space Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--white);
+      min-height: 100vh;
+    }
+
+    /* ── Canvas BG ── */
+    #bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    .page { position: relative; z-index: 1; }
+
+    /* ── Header ── */
+    .header {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2.5rem; height: 64px;
+      background: rgba(5,10,20,0.92);
+      backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .logo-mark {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: rgba(255,77,109,0.15); border: 1px solid var(--red);
+      display: flex; align-items: center; justify-content: center; font-size: 15px;
+      box-shadow: 0 0 12px rgba(255,77,109,0.2);
+    }
+    .logo-name {
+      font-size: 1.05rem; font-weight: 800; letter-spacing: -0.03em;
+      background: linear-gradient(90deg, var(--teal), var(--emerald));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .logo-sub { font-size: 0.7rem; color: var(--muted); margin-top: 1px; }
+    .back-link {
+      padding: 7px 16px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+      color: var(--teal); text-decoration: none; border: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+    .back-link:hover { background: rgba(0,212,255,0.08); border-color: rgba(0,212,255,0.3); }
+
+    /* ── Main layout ── */
+    .main { max-width: 1200px; margin: 0 auto; padding: 2rem 2.5rem 4rem; }
+
+    /* ── Proof box ── */
+    .proof-box {
+      background: rgba(0,212,255,0.04);
+      border: 1px solid rgba(0,212,255,0.18);
+      border-radius: 16px; padding: 1.25rem 1.5rem;
+      margin-bottom: 1.75rem; position: relative; overflow: hidden;
+    }
+    .proof-box::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--teal), transparent);
+    }
+    .proof-box h2 { font-size: 0.9rem; font-weight: 700; color: var(--teal); margin-bottom: 0.5rem; }
+    .proof-box p  { font-size: 0.82rem; color: #94a3b8; line-height: 1.75; }
+
+    /* ── Upload + Controls grid ── */
+    .top-grid {
+      display: grid; grid-template-columns: 1fr 260px;
+      gap: 1.25rem; margin-bottom: 1.25rem;
+    }
+    @media (max-width: 768px) { .top-grid { grid-template-columns: 1fr; } }
+
+    /* ── Glass card ── */
+    .glass {
+      background: var(--bg1); border: 1px solid var(--border);
+      border-radius: 18px; padding: 1.5rem;
+      position: relative; overflow: hidden;
+    }
+    .glass::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--teal), transparent); opacity: 0.4;
+    }
+    .card-hdr {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 1.25rem; padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-ico {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+    }
+    .card-ttl { font-size: 0.85rem; font-weight: 600; }
+    .card-sub-txt { font-size: 0.68rem; color: var(--muted); margin-top: 1px; }
+
+    /* ── Drop zone ── */
+    .drop {
+      border: 1.5px dashed rgba(0,212,255,0.2); border-radius: 12px;
+      min-height: 160px; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.25s; background: rgba(0,212,255,0.02);
+      margin-bottom: 1rem; position: relative; overflow: hidden;
+    }
+    .drop:hover, .drop.over { border-color: rgba(0,212,255,0.45); background: rgba(0,212,255,0.05); }
+    .drop.has-file { border-color: rgba(0,255,136,0.35); }
+    .drop-inner { text-align: center; padding: 1.5rem; }
+    .drop-emoji { font-size: 2.5rem; display: block; margin-bottom: 0.5rem; animation: breathe 3s ease-in-out infinite; }
+    @keyframes breathe { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+    .drop-t { font-size: 0.88rem; font-weight: 600; }
+    .drop-s { font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
+    .prev-img { width: 100%; height: 160px; object-fit: contain; border-radius: 10px; }
+
+    /* ── Run button ── */
+    .run-btn {
+      width: 100%; padding: 12px; border-radius: 10px;
+      font-size: 0.9rem; font-weight: 700; cursor: pointer; border: none;
+      background: linear-gradient(135deg, var(--red), #ff6b35);
+      color: white; margin-bottom: 1rem; transition: all 0.2s; font-family: var(--font);
+      box-shadow: 0 0 20px rgba(255,77,109,0.25);
+    }
+    .run-btn:hover:not(:disabled) { box-shadow: 0 0 32px rgba(255,77,109,0.45); transform: translateY(-1px); }
+    .run-btn:disabled { background: var(--bg2); color: var(--muted); box-shadow: none; cursor: not-allowed; }
+
+    /* ── Step indicator ── */
+    .steps { display: flex; gap: 6px; flex-wrap: wrap; }
+    .sd {
+      padding: 4px 10px; border-radius: 99px; font-size: 0.65rem; font-weight: 600;
+      font-family: var(--mono); border: 1px solid var(--border); color: var(--muted);
+      background: var(--bg2); transition: all 0.3s;
+    }
+    .sd.active { background: rgba(0,212,255,0.15); color: var(--teal); border-color: rgba(0,212,255,0.4); }
+    .sd.done   { background: rgba(0,255,136,0.12); color: var(--emerald); border-color: rgba(0,255,136,0.3); }
+    .sd.warn   { background: rgba(255,77,109,0.15); color: var(--red); border-color: rgba(255,77,109,0.4); }
+
+    /* ── Attack controls ── */
+    .attack-controls { display: flex; flex-direction: column; gap: 6px; }
+    .atk-btn {
+      padding: 9px 12px; border-radius: 9px; font-size: 0.78rem; font-weight: 500;
+      cursor: pointer; border: 1px solid var(--border); background: var(--bg2);
+      color: #94a3b8; transition: all 0.2s; text-align: left; font-family: var(--font);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .atk-btn:hover { background: rgba(255,255,255,0.06); color: var(--white); }
+    .atk-btn.active {
+      background: rgba(0,212,255,0.12); color: var(--teal);
+      border-color: rgba(0,212,255,0.35);
+    }
+    .intensity-row { margin-top: 0.75rem; }
+    .intensity-lbl { font-size: 0.72rem; color: var(--muted); margin-bottom: 6px; font-family: var(--mono); }
+    .intensity-lbl span { color: var(--teal); font-weight: 700; }
+    input[type=range] {
+      width: 100%; accent-color: var(--teal);
+      height: 4px; cursor: pointer;
+    }
+
+    /* ── Results 3-col grid ── */
+    .results-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem; margin-bottom: 1.25rem;
+    }
+    @media (max-width: 768px) { .results-grid { grid-template-columns: 1fr; } }
+
+    .result-card {
+      background: var(--bg1); border: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden; transition: all 0.3s;
+    }
+    .result-card.card-orig   { border-color: rgba(0,212,255,0.25); }
+    .result-card.card-danger { border-color: rgba(255,77,109,0.25); }
+    .result-card.card-safe   { border-color: rgba(0,255,136,0.25); }
+
+    .rc-header {
+      padding: 0.875rem 1rem; border-bottom: 1px solid var(--border);
+      font-size: 0.82rem; font-weight: 700; text-align: center;
+    }
+    .card-orig   .rc-header { color: var(--teal); }
+    .card-danger .rc-header { color: var(--red); }
+    .card-safe   .rc-header { color: var(--emerald); }
+
+    .img-wrap {
+      aspect-ratio: 1/1; background: #000;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    .img-wrap img { width: 100%; height: 100%; object-fit: contain; }
+    .img-placeholder {
+      text-align: center; padding: 1rem; opacity: 0.3;
+    }
+    .img-placeholder span { font-size: 2rem; display: block; margin-bottom: 6px; }
+    .img-placeholder p { font-size: 0.7rem; font-family: var(--mono); }
+
+    /* Verdict inside card */
+    .rc-verdict {
+      padding: 0.75rem 1rem; text-align: center; border-bottom: 1px solid var(--border);
+      transition: all 0.3s;
+    }
+    .rc-verdict.normal    { background: rgba(0,255,136,0.06); }
+    .rc-verdict.pneumonia { background: rgba(255,77,109,0.06); }
+    .rc-verdict.pending   { background: rgba(255,255,255,0.02); }
+    .rv-label { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em; }
+    .rc-verdict.normal    .rv-label { color: var(--emerald); }
+    .rc-verdict.pneumonia .rv-label { color: var(--red); }
+    .rc-verdict.pending   .rv-label { color: var(--muted); font-size: 0.82rem; font-weight: 400; }
+    .rv-conf { font-size: 0.7rem; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+    .rv-note { font-size: 0.68rem; margin-top: 4px; }
+
+    /* Changed badge */
+    .changed-badge {
+      display: inline-block; padding: 2px 7px; border-radius: 5px;
+      font-size: 0.6rem; font-weight: 800; background: var(--red);
+      color: white; margin-left: 6px; vertical-align: middle; font-family: var(--mono);
+    }
+
+    /* Bars */
+    .rc-bars { padding: 0.75rem 1rem; }
+    .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .bar-lbl { font-size: 0.68rem; width: 64px; color: var(--muted); font-family: var(--mono); }
+    .bar-track { flex: 1; height: 5px; background: rgba(255,255,255,0.05); border-radius: 99px; overflow: hidden; }
+    .bar-fill  { height: 100%; border-radius: 99px; width: 0%; transition: width 0.7s cubic-bezier(.4,0,.2,1); }
+    .fill-n { background: linear-gradient(90deg, rgba(0,255,136,0.3), var(--emerald)); }
+    .fill-p { background: linear-gradient(90deg, rgba(255,77,109,0.3), var(--red)); }
+    .bar-pct { font-size: 0.68rem; width: 36px; text-align: right; color: var(--white); font-family: var(--mono); }
+
+    .attack-desc-txt {
+      padding: 0 1rem 0.75rem; font-size: 0.65rem;
+      color: var(--red); font-family: var(--mono); text-align: center;
+    }
+    .safe-note {
+      padding: 0 1rem 0.75rem; font-size: 0.65rem;
+      color: var(--emerald); font-family: var(--mono); text-align: center;
+    }
+
+    /* ── Significance box ── */
+    .sig-box {
+      border-radius: 16px; padding: 1.5rem; border: 1px solid;
+      margin-bottom: 1.5rem; position: relative; overflow: hidden;
+    }
+    .sig-box.protected {
+      background: rgba(0,212,255,0.04); border-color: rgba(0,212,255,0.2);
+    }
+    .sig-box.danger {
+      background: rgba(255,77,109,0.05); border-color: rgba(255,77,109,0.25);
+    }
+    .sig-box::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    }
+    .sig-box.protected::before { background: linear-gradient(90deg, transparent, var(--teal), transparent); }
+    .sig-box.danger::before    { background: linear-gradient(90deg, transparent, var(--red), transparent); }
+
+    .sig-title { font-size: 1rem; font-weight: 800; margin-bottom: 0.75rem; }
+    .sig-box.protected .sig-title { color: var(--teal); }
+    .sig-box.danger    .sig-title { color: var(--red); }
+    .sig-msg { font-size: 0.82rem; color: #94a3b8; line-height: 1.75; margin-bottom: 1.25rem; }
+
+    .sig-stats {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    }
+    @media (max-width: 600px) { .sig-stats { grid-template-columns: 1fr 1fr; } }
+    .sig-stat {
+      background: var(--bg); border-radius: 10px; padding: 0.75rem;
+      text-align: center; border: 1px solid var(--border);
+    }
+    .sig-stat-lbl { font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); margin-bottom: 6px; }
+    .sig-stat-val { font-size: 1rem; font-weight: 800; font-family: var(--mono); }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center; padding: 1.5rem 2rem; font-size: 0.68rem;
+      color: var(--muted); border-top: 1px solid var(--border); font-family: var(--mono);
+    }
   </style>
 </head>
 <body>
 
-<header class="header">
-  <div class="header-inner">
-    <div class="logo">
-      <span class="logo-icon">⚔️</span>
-      <div><h1>SecureLens</h1><p>FHE Attack Significance Demo</p></div>
-    </div>
-    <a href="/" style="color:#63b3ed;text-decoration:none;font-size:0.9rem">← Back to Demo</a>
-  </div>
-</header>
+<!-- Particle canvas -->
+<canvas id="bg-canvas"></canvas>
 
-<main style="max-width:1100px;margin:2rem auto;padding:0 2rem">
+<div class="page">
 
-  <div style="background:#1a2240;border:1px solid #2d4a7a;border-radius:12px;padding:1.25rem;margin-bottom:1.5rem">
-    <h2 style="color:#63b3ed;font-size:1rem;margin-bottom:0.5rem">What this demo proves</h2>
-    <p style="color:#a0aec0;font-size:13px;line-height:1.7;margin:0">
-      An attacker intercepts your X-ray image during transmission.
-      <strong style="color:#fc8181">Without FHE</strong> — the attacker corrupts the image and the server diagnoses from corrupted data → <strong style="color:#fc8181">wrong diagnosis</strong>.
-      <strong style="color:#68d391">With FHE</strong> — the image is encrypted before transmission, attacker only sees ciphertext → <strong style="color:#68d391">correct diagnosis preserved</strong>.
-    </p>
-  </div>
+  <!-- Header -->
+  <header class="header">
+    <a href="/" class="logo">
+      <div class="logo-mark">⚔️</div>
+      <div>
+        <div class="logo-name">SecureLens</div>
+        <div class="logo-sub">FHE Attack Significance Demo</div>
+      </div>
+    </a>
+    <a href="/" class="back-link">← Back to Demo</a>
+  </header>
 
-  <!-- Upload + Controls -->
-  <div style="display:grid;grid-template-columns:1fr 280px;gap:1rem;margin-bottom:1rem">
+  <div class="page">
+    <main class="main">
 
-    <div style="background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;padding:1.25rem">
-      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileIn').click()">
-        <div id="uploadText">
-          <div style="font-size:2rem;margin-bottom:0.5rem">🫁</div>
-          <p style="font-size:14px;font-weight:600;color:#e2e8f0">Upload chest X-ray</p>
-          <p style="font-size:12px;color:#718096">PNG, JPG, JPEG</p>
+      <!-- What this proves -->
+      <div class="proof-box">
+        <h2>🔬 What this demo proves</h2>
+        <p>
+          An attacker intercepts your X-ray image during transmission.
+          <strong style="color:var(--red)">Without FHE</strong> — the attacker corrupts the image
+          and the server diagnoses from corrupted data →
+          <strong style="color:var(--red)">wrong diagnosis</strong>.
+          <strong style="color:var(--emerald)">With FHE</strong> — the image is encrypted before
+          transmission, attacker only sees ciphertext →
+          <strong style="color:var(--emerald)">correct diagnosis preserved</strong>.
+        </p>
+      </div>
+
+      <!-- Upload + Attack controls -->
+      <div class="top-grid">
+
+        <!-- Upload section -->
+        <div class="glass">
+          <div class="card-hdr">
+            <div class="card-ico" style="background:rgba(255,77,109,0.12);border:1px solid rgba(255,77,109,0.2)">📤</div>
+            <div>
+              <div class="card-ttl">Upload Chest X-Ray</div>
+              <div class="card-sub-txt">PNG · JPG · JPEG supported</div>
+            </div>
+          </div>
+
+          <div class="drop" id="dropZone">
+            <div class="drop-inner" id="dropContent">
+              <span class="drop-emoji">🫁</span>
+              <p class="drop-t">Drop X-ray here</p>
+              <p class="drop-s">or click to browse</p>
+            </div>
+            <img id="previewImg" class="prev-img" style="display:none" alt="preview"/>
+          </div>
+          <input type="file" id="fileIn" accept=".png,.jpg,.jpeg" hidden/>
+
+          <button class="run-btn" id="runBtn" disabled onclick="runAttackDemo()">
+            ⚔️ Simulate Attack &amp; Compare
+          </button>
+
+          <div class="steps" id="stepRow">
+            <div class="sd" id="sd1">1. Upload</div>
+            <div class="sd" id="sd2">2. Original predict</div>
+            <div class="sd" id="sd3">3. Attack image</div>
+            <div class="sd" id="sd4">4. Without FHE</div>
+            <div class="sd" id="sd5">5. With FHE</div>
+          </div>
         </div>
-        <img id="previewImg" style="display:none;max-height:150px;border-radius:8px" alt="preview"/>
-      </div>
-      <input type="file" id="fileIn" accept=".png,.jpg,.jpeg" style="display:none"/>
 
-      <button class="run-btn" id="runBtn" disabled onclick="runAttackDemo()">
-        ⚔️ Simulate Attack & Compare
-      </button>
+        <!-- Attack type controls -->
+        <div class="glass">
+          <div class="card-hdr">
+            <div class="card-ico" style="background:rgba(255,209,102,0.12);border:1px solid rgba(255,209,102,0.2)">🎯</div>
+            <div>
+              <div class="card-ttl">Attack Type</div>
+              <div class="card-sub-txt">Select attack to simulate</div>
+            </div>
+          </div>
 
-      <!-- Step indicator -->
-      <div class="step-indicator" id="stepIndicator">
-        <div class="step-dot" id="sd1">1. Upload</div>
-        <div class="step-dot" id="sd2">2. Original predict</div>
-        <div class="step-dot" id="sd3">3. Attack image</div>
-        <div class="step-dot" id="sd4">4. Without FHE</div>
-        <div class="step-dot" id="sd5">5. With FHE</div>
-      </div>
-    </div>
+          <div class="attack-controls">
+            <button class="atk-btn active" id="btn-noise"      onclick="setAttack('noise')">🔊 Gaussian noise</button>
+            <button class="atk-btn"        id="btn-brightness" onclick="setAttack('brightness')">☀️ Brightness shift</button>
+            <button class="atk-btn"        id="btn-blackout"   onclick="setAttack('blackout')">⬛ Region blackout</button>
+            <button class="atk-btn"        id="btn-blur"       onclick="setAttack('blur')">🌫️ Blur injection</button>
+            <button class="atk-btn"        id="btn-contrast"   onclick="setAttack('contrast')">🎨 Contrast reduce</button>
+            <button class="atk-btn"        id="btn-flip"       onclick="setAttack('flip')">🔄 Image flip</button>
+          </div>
 
-    <!-- Attack controls -->
-    <div style="background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;padding:1.25rem">
-      <div style="font-size:13px;font-weight:600;color:#e2e8f0;margin-bottom:0.75rem">Attack type</div>
-
-      <button class="attack-btn active" id="btn-noise"      onclick="setAttack('noise')">🔊 Gaussian noise</button>
-      <button class="attack-btn"        id="btn-brightness" onclick="setAttack('brightness')">☀️ Brightness shift</button>
-      <button class="attack-btn"        id="btn-blackout"   onclick="setAttack('blackout')">⬛ Region blackout</button>
-      <button class="attack-btn"        id="btn-blur"       onclick="setAttack('blur')">🌫️ Blur injection</button>
-      <button class="attack-btn"        id="btn-contrast"   onclick="setAttack('contrast')">🎨 Contrast reduce</button>
-      <button class="attack-btn"        id="btn-flip"       onclick="setAttack('flip')">🔄 Image flip</button>
-
-      <div style="margin-top:1rem">
-        <div style="font-size:12px;color:#718096;margin-bottom:4px">
-          Attack intensity: <span id="lvlLabel">30%</span>
-        </div>
-        <input type="range" id="levelSlider" min="10" max="90" value="30"
-               style="width:100%" oninput="updateLevel(this.value)"/>
-      </div>
-    </div>
-  </div>
-
-  <!-- Results grid -->
-  <div class="attack-grid">
-
-    <!-- Column 1: Original -->
-    <div class="attack-col original">
-      <div style="font-size:13px;font-weight:600;color:#63b3ed;margin-bottom:0.75rem;text-align:center">
-        📷 Original Image
-      </div>
-      <div class="img-box">
-        <img id="imgOriginal" src="" alt="Original X-ray"
-             style="display:none"/>
-        <span id="imgOrigPlaceholder" style="color:#4a5568;font-size:12px">Upload image</span>
-      </div>
-      <div class="verdict-sm unknown" id="verdictOrig">
-        <div style="font-size:14px;color:#718096">Awaiting upload...</div>
-      </div>
-      <div class="bar-row">
-        <span style="width:72px;color:#a0aec0">Normal</span>
-        <div class="bar-track"><div class="bar-fill" id="barOrigN" style="background:#48bb78;width:0%"></div></div>
-        <span style="width:36px;color:#e2e8f0;text-align:right" id="pctOrigN">—</span>
-      </div>
-      <div class="bar-row">
-        <span style="width:72px;color:#a0aec0">Pneumonia</span>
-        <div class="bar-track"><div class="bar-fill" id="barOrigP" style="background:#fc8181;width:0%"></div></div>
-        <span style="width:36px;color:#e2e8f0;text-align:right" id="pctOrigP">—</span>
-      </div>
-    </div>
-
-    <!-- Column 2: Without FHE (attacked) -->
-    <div class="attack-col danger">
-      <div style="font-size:13px;font-weight:600;color:#fc8181;margin-bottom:0.75rem;text-align:center">
-        ⚠️ Without FHE (attacked)
-      </div>
-      <div class="img-box">
-        <img id="imgAttacked" src="" alt="Attacked X-ray"
-             style="display:none"/>
-        <span id="imgAttPlaceholder" style="color:#4a5568;font-size:12px">Run demo</span>
-      </div>
-      <div class="verdict-sm unknown" id="verdictNoFhe">
-        <div style="font-size:14px;color:#718096">Awaiting run...</div>
-      </div>
-      <div class="bar-row">
-        <span style="width:72px;color:#a0aec0">Normal</span>
-        <div class="bar-track"><div class="bar-fill" id="barNoFheN" style="background:#48bb78;width:0%"></div></div>
-        <span style="width:36px;color:#e2e8f0;text-align:right" id="pctNoFheN">—</span>
-      </div>
-      <div class="bar-row">
-        <span style="width:72px;color:#a0aec0">Pneumonia</span>
-        <div class="bar-track"><div class="bar-fill" id="barNoFheP" style="background:#fc8181;width:0%"></div></div>
-        <span style="width:36px;color:#e2e8f0;text-align:right" id="pctNoFheP">—</span>
-      </div>
-      <div id="attackDesc" style="font-size:11px;color:#fc8181;margin-top:6px;text-align:center"></div>
-    </div>
-
-    <!-- Column 3: With FHE -->
-    <div class="attack-col success">
-      <div style="font-size:13px;font-weight:600;color:#68d391;margin-bottom:0.75rem;text-align:center">
-        🔒 With FHE (protected)
-      </div>
-      <div class="img-box" style="border:2px solid #276749">
-        <img id="imgFhe" src="" alt="FHE protected"
-             style="display:none"/>
-        <div id="imgFhePlaceholder" style="text-align:center;padding:1rem">
-          <div style="font-size:2rem;margin-bottom:0.5rem">🔐</div>
-          <div style="color:#4a5568;font-size:12px">Encrypted before<br/>transmission</div>
+          <div class="intensity-row">
+            <div class="intensity-lbl">
+              Attack intensity: <span id="lvlLabel">30%</span>
+            </div>
+            <input type="range" id="levelSlider" min="10" max="90" value="30"
+                   oninput="updateLevel(this.value)"/>
+          </div>
         </div>
       </div>
-      <div class="verdict-sm unknown" id="verdictFhe">
-        <div style="font-size:14px;color:#718096">Awaiting run...</div>
+
+      <!-- Results 3-column -->
+      <div class="results-grid">
+
+        <!-- Column 1: Original -->
+        <div class="result-card card-orig">
+          <div class="rc-header">📷 Original Image</div>
+          <div class="img-wrap">
+            <img id="imgOriginal" src="" alt="Original" style="display:none"/>
+            <div class="img-placeholder" id="phOrig">
+              <span>🫁</span>
+              <p>Upload image to begin</p>
+            </div>
+          </div>
+          <div class="rc-verdict pending" id="verdictOrig">
+            <div class="rv-label">Awaiting upload...</div>
+          </div>
+          <div class="rc-bars">
+            <div class="bar-row">
+              <span class="bar-lbl">Normal</span>
+              <div class="bar-track"><div class="bar-fill fill-n" id="barOrigN"></div></div>
+              <span class="bar-pct" id="pctOrigN">—</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-lbl">Pneumonia</span>
+              <div class="bar-track"><div class="bar-fill fill-p" id="barOrigP"></div></div>
+              <span class="bar-pct" id="pctOrigP">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 2: Without FHE (attacked) -->
+        <div class="result-card card-danger">
+          <div class="rc-header">⚠️ Without FHE (attacked)</div>
+          <div class="img-wrap">
+            <img id="imgAttacked" src="" alt="Attacked" style="display:none"/>
+            <div class="img-placeholder" id="phAtt">
+              <span>⚡</span>
+              <p>Run demo to see attack</p>
+            </div>
+          </div>
+          <div class="rc-verdict pending" id="verdictNoFhe">
+            <div class="rv-label">Awaiting run...</div>
+          </div>
+          <div class="rc-bars">
+            <div class="bar-row">
+              <span class="bar-lbl">Normal</span>
+              <div class="bar-track"><div class="bar-fill fill-n" id="barNoFheN"></div></div>
+              <span class="bar-pct" id="pctNoFheN">—</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-lbl">Pneumonia</span>
+              <div class="bar-track"><div class="bar-fill fill-p" id="barNoFheP"></div></div>
+              <span class="bar-pct" id="pctNoFheP">—</span>
+            </div>
+          </div>
+          <div class="attack-desc-txt" id="attackDesc"></div>
+        </div>
+
+        <!-- Column 3: With FHE -->
+        <div class="result-card card-safe">
+          <div class="rc-header">🔒 With FHE (protected)</div>
+          <div class="img-wrap">
+            <img id="imgFhe" src="" alt="FHE protected" style="display:none"/>
+            <div class="img-placeholder" id="phFhe">
+              <span>🔐</span>
+              <p>Encrypted before<br/>transmission</p>
+            </div>
+          </div>
+          <div class="rc-verdict pending" id="verdictFhe">
+            <div class="rv-label">Awaiting run...</div>
+          </div>
+          <div class="rc-bars">
+            <div class="bar-row">
+              <span class="bar-lbl">Normal</span>
+              <div class="bar-track"><div class="bar-fill fill-n" id="barFheN"></div></div>
+              <span class="bar-pct" id="pctFheN">—</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-lbl">Pneumonia</span>
+              <div class="bar-track"><div class="bar-fill fill-p" id="barFheP"></div></div>
+              <span class="bar-pct" id="pctFheP">—</span>
+            </div>
+          </div>
+          <div class="safe-note" id="safeNote">Attacker only sees 326KB ciphertext</div>
+        </div>
       </div>
-      <div class="bar-row">
-        <span style="width:72px;color:#a0aec0">Normal</span>
-        <div class="bar-track"><div class="bar-fill" id="barFheN" style="background:#48bb78;width:0%"></div></div>
-        <span style="width:36px;color:#e2e8f0;text-align:right" id="pctFheN">—</span>
+
+      <!-- Significance box -->
+      <div class="sig-box protected" id="sigBox" style="display:none">
+        <div class="sig-title" id="sigTitle"></div>
+        <div class="sig-msg" id="sigMsg"></div>
+        <div class="sig-stats">
+          <div class="sig-stat">
+            <div class="sig-stat-lbl">Original</div>
+            <div class="sig-stat-val" id="sigOrig" style="color:var(--teal)">—</div>
+          </div>
+          <div class="sig-stat">
+            <div class="sig-stat-lbl">Without FHE</div>
+            <div class="sig-stat-val" id="sigNoFhe">—</div>
+          </div>
+          <div class="sig-stat">
+            <div class="sig-stat-lbl">With FHE</div>
+            <div class="sig-stat-val" id="sigFhe" style="color:var(--emerald)">—</div>
+          </div>
+          <div class="sig-stat">
+            <div class="sig-stat-lbl">Feature change</div>
+            <div class="sig-stat-val" id="sigFeat" style="color:var(--yellow)">—</div>
+          </div>
+        </div>
       </div>
-      <div class="bar-row">
-        <span style="width:72px;color:#a0aec0">Pneumonia</span>
-        <div class="bar-track"><div class="bar-fill" id="barFheP" style="background:#fc8181;width:0%"></div></div>
-        <span style="width:36px;color:#e2e8f0;text-align:right" id="pctFheP">—</span>
-      </div>
-      <div style="font-size:11px;color:#68d391;margin-top:6px;text-align:center">
-        Attacker only sees 326KB ciphertext
-      </div>
-    </div>
+
+    </main>
   </div>
 
-  <!-- Significance box -->
-  <div id="sigBox" style="display:none" class="sig-box protected">
-    <h3 id="sigTitle" style="font-size:1rem;margin-bottom:0.5rem"></h3>
-    <p id="sigMessage" style="font-size:13px;line-height:1.7;margin:0;color:#a0aec0"></p>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:1rem">
-      <div style="background:#0d1117;border-radius:6px;padding:8px;text-align:center">
-        <div style="font-size:10px;color:#718096">Original</div>
-        <div style="font-size:14px;font-weight:600;color:#e2e8f0" id="sigOrig">—</div>
-      </div>
-      <div style="background:#0d1117;border-radius:6px;padding:8px;text-align:center">
-        <div style="font-size:10px;color:#718096">Without FHE</div>
-        <div style="font-size:14px;font-weight:600" id="sigNoFhe">—</div>
-      </div>
-      <div style="background:#0d1117;border-radius:6px;padding:8px;text-align:center">
-        <div style="font-size:10px;color:#718096">With FHE</div>
-        <div style="font-size:14px;font-weight:600;color:#68d391" id="sigFhe">—</div>
-      </div>
-      <div style="background:#0d1117;border-radius:6px;padding:8px;text-align:center">
-        <div style="font-size:10px;color:#718096">Feature change</div>
-        <div style="font-size:14px;font-weight:600;color:#f6e05e" id="sigFeat">—</div>
-      </div>
-    </div>
-  </div>
-
-</main>
-
-<footer class="footer">
-  <p>SecureLens — Final Year Thesis | CKKS FHE | TenSEAL | PyTorch</p>
-</footer>
+  <footer class="footer">
+    SecureLens · CKKS Fully Homomorphic Encryption · TenSEAL · PyTorch · ResNet-18
+  </footer>
+</div>
 
 <script>
-const fileIn  = document.getElementById("fileIn");
-const runBtn  = document.getElementById("runBtn");
-let selectedAttack = "noise";
+/* ── Particle canvas ── */
+const bgC = document.getElementById('bg-canvas');
+const bgX = bgC.getContext('2d');
+let W, H, pts = [];
+function resize(){ W = bgC.width = window.innerWidth; H = bgC.height = window.innerHeight; }
+resize(); window.addEventListener('resize', resize);
+class Pt {
+  constructor(){ this.reset(); }
+  reset(){
+    this.x=(Math.random()*W); this.y=(Math.random()*H);
+    this.vx=(Math.random()-0.5)*0.25; this.vy=(Math.random()-0.5)*0.25;
+    this.r=Math.random()*1.2+0.3; this.a=Math.random()*0.3+0.05;
+    this.c=Math.random()<0.5?'0,212,255':'255,77,109';
+  }
+  tick(){ this.x+=this.vx; this.y+=this.vy; if(this.x<0||this.x>W||this.y<0||this.y>H) this.reset(); }
+  draw(){ bgX.beginPath(); bgX.arc(this.x,this.y,this.r,0,Math.PI*2); bgX.fillStyle=`rgba(${this.c},${this.a})`; bgX.fill(); }
+}
+for(let i=0;i<80;i++) pts.push(new Pt());
+function connect(){
+  for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++){
+    const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.sqrt(dx*dx+dy*dy);
+    if(d<110){ bgX.beginPath(); bgX.moveTo(pts[i].x,pts[i].y); bgX.lineTo(pts[j].x,pts[j].y);
+      bgX.strokeStyle=`rgba(0,212,255,${0.04*(1-d/110)})`; bgX.lineWidth=0.5; bgX.stroke(); }
+  }
+}
+(function loop(){ bgX.clearRect(0,0,W,H); pts.forEach(p=>{p.tick();p.draw();}); connect(); requestAnimationFrame(loop); })();
+
+/* ── File handling ── */
+const fileIn  = document.getElementById('fileIn');
+const dropZone= document.getElementById('dropZone');
+const runBtn  = document.getElementById('runBtn');
+let selectedAttack = 'noise';
 let attackLevel    = 0.3;
 
-fileIn.addEventListener("change", e => {
-  const f = e.target.files[0];
-  if(!f) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    document.getElementById("previewImg").src = ev.target.result;
-    document.getElementById("previewImg").style.display = "block";
-    document.getElementById("uploadText").style.display = "none";
-    document.getElementById("uploadZone").classList.add("has-file");
+dropZone.addEventListener('click', () => fileIn.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('over');
+  if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+fileIn.addEventListener('change', e => { if(e.target.files[0]) handleFile(e.target.files[0]); });
+
+function handleFile(f) {
+  if(!['image/png','image/jpeg','image/jpg'].includes(f.type)){ alert('Use PNG or JPEG.'); return; }
+  const r = new FileReader();
+  r.onload = ev => {
+    document.getElementById('previewImg').src = ev.target.result;
+    document.getElementById('previewImg').style.display = 'block';
+    document.getElementById('dropContent').style.display = 'none';
+    dropZone.classList.add('has-file');
   };
-  reader.readAsDataURL(f);
+  r.readAsDataURL(f);
   runBtn.disabled = false;
   setStep(1);
-});
+}
 
+/* ── Attack controls ── */
 function setAttack(type) {
   selectedAttack = type;
-  document.querySelectorAll(".attack-btn").forEach(b =>
-    b.classList.remove("active"));
-  document.getElementById("btn-"+type).classList.add("active");
+  document.querySelectorAll('.atk-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-'+type).classList.add('active');
 }
 
 function updateLevel(v) {
   attackLevel = v / 100;
-  document.getElementById("lvlLabel").textContent = v + "%";
+  document.getElementById('lvlLabel').textContent = v + '%';
 }
 
+/* ── Step indicator ── */
 function setStep(n) {
   for(let i=1;i<=5;i++){
-    const el = document.getElementById("sd"+i);
-    el.className = "step-dot" +
-      (i < n ? " done" : i === n ? " active" : "");
+    const el = document.getElementById('sd'+i);
+    el.className = 'sd' + (i < n ? ' done' : i === n ? ' active' : '');
   }
 }
 
+/* ── Run demo ── */
 async function runAttackDemo() {
   const file = fileIn.files[0];
   if(!file) return;
 
   runBtn.disabled = true;
-  runBtn.textContent = "⏳ Running attack simulation...";
+  runBtn.textContent = '⏳ Running attack simulation...';
+  document.getElementById('sigBox').style.display = 'none';
 
-  setStep(2);
-  await sleep(300);
-  setStep(3);
-  await sleep(300);
+  setStep(2); await sleep(300);
+  setStep(3); await sleep(300);
   setStep(4);
 
   const fd = new FormData();
-  fd.append("image",       file);
-  fd.append("attack_type", selectedAttack);
-  fd.append("attack_level", attackLevel.toString());
+  fd.append('image',        file);
+  fd.append('attack_type',  selectedAttack);
+  fd.append('attack_level', attackLevel.toString());
 
   let data;
   try {
-    const resp = await fetch("/api/attack-demo",
-                             {method:"POST", body:fd});
+    const resp = await fetch('/api/attack-demo', { method:'POST', body:fd });
     data = await resp.json();
     if(data.error) throw new Error(data.error);
   } catch(err) {
-    alert("Error: " + err.message);
+    alert('Error: ' + err.message);
     runBtn.disabled = false;
-    runBtn.textContent = "⚔️ Simulate Attack & Compare";
+    runBtn.textContent = '⚔️ Simulate Attack & Compare';
     return;
   }
 
@@ -302,148 +619,111 @@ async function runAttackDemo() {
   await sleep(200);
 
   renderOriginal(data.original);
-  await sleep(400);
+  await sleep(350);
   renderNoFhe(data.without_fhe, data.attack, data.original);
-  await sleep(400);
+  await sleep(350);
   renderFhe(data.with_fhe, data.original);
   renderSignificance(data);
 
   runBtn.disabled = false;
-  runBtn.textContent = "⚔️ Run Again";
+  runBtn.textContent = '⚔️ Run Again';
 }
 
+/* ── Render original ── */
 function renderOriginal(o) {
-  document.getElementById("imgOriginal").src =
-    "data:image/png;base64," + o.image_b64;
-  document.getElementById("imgOriginal").style.display = "block";
-  document.getElementById("imgOrigPlaceholder").style.display = "none";
+  show('imgOriginal', 'data:image/png;base64,'+o.image_b64, 'phOrig');
 
-  const cls = o.prediction === "Normal" ? "normal" : "pneumonia";
-  const col = o.prediction === "Normal" ? "#68d391" : "#fc8181";
-  document.getElementById("verdictOrig").className =
-    "verdict-sm " + cls;
-  document.getElementById("verdictOrig").innerHTML = `
-    <div style="font-size:16px;font-weight:700;color:${col}">
-      ${o.prediction}
-    </div>
-    <div style="font-size:12px;color:#a0aec0">
-      Confidence: ${o.confidence}%
-    </div>`;
+  const cls = o.prediction === 'Normal' ? 'normal' : 'pneumonia';
+  const col = o.prediction === 'Normal' ? 'var(--emerald)' : 'var(--red)';
+  const vd  = document.getElementById('verdictOrig');
+  vd.className = 'rc-verdict ' + cls;
+  vd.innerHTML = `
+    <div class="rv-label" style="color:${col}">${o.prediction}</div>
+    <div class="rv-conf">Confidence: ${o.confidence}%</div>`;
 
-  setTimeout(() => {
-    document.getElementById("barOrigN").style.width =
-      o.normal_score + "%";
-    document.getElementById("barOrigP").style.width =
-      o.pneumonia_score + "%";
-  }, 100);
-  document.getElementById("pctOrigN").textContent =
-    o.normal_score + "%";
-  document.getElementById("pctOrigP").textContent =
-    o.pneumonia_score + "%";
+  animBars('barOrigN', 'pctOrigN', o.normal_score, 'barOrigP', 'pctOrigP', o.pneumonia_score);
 }
 
+/* ── Render without FHE ── */
 function renderNoFhe(r, attack, orig) {
-  document.getElementById("imgAttacked").src =
-    "data:image/png;base64," + attack.image_b64;
-  document.getElementById("imgAttacked").style.display = "block";
-  document.getElementById("imgAttPlaceholder").style.display = "none";
+  show('imgAttacked', 'data:image/png;base64,'+attack.image_b64, 'phAtt');
 
   const changed = r.diagnosis_changed;
-  const cls = r.prediction === "Normal" ? "normal" : "pneumonia";
-  const col = r.prediction === "Normal" ? "#68d391" : "#fc8181";
-  document.getElementById("verdictNoFhe").className =
-    "verdict-sm " + cls;
-  document.getElementById("verdictNoFhe").innerHTML = `
-    <div style="font-size:16px;font-weight:700;color:${col}">
-      ${r.prediction}
-      ${changed
-        ? '<span style="font-size:11px;background:#9b2c2c;padding:2px 6px;border-radius:4px;margin-left:4px;color:white">CHANGED!</span>'
-        : ''}
-    </div>
-    <div style="font-size:12px;color:#a0aec0">
-      Confidence: ${r.confidence}%
-    </div>`;
+  const cls = r.prediction === 'Normal' ? 'normal' : 'pneumonia';
+  const col = r.prediction === 'Normal' ? 'var(--emerald)' : 'var(--red)';
+  const badge = changed
+    ? '<span class="changed-badge">CHANGED!</span>' : '';
+  const vd = document.getElementById('verdictNoFhe');
+  vd.className = 'rc-verdict ' + cls;
+  vd.innerHTML = `
+    <div class="rv-label" style="color:${col}">${r.prediction}${badge}</div>
+    <div class="rv-conf">Confidence: ${r.confidence}%</div>`;
 
-  setTimeout(() => {
-    document.getElementById("barNoFheN").style.width =
-      r.normal_score + "%";
-    document.getElementById("barNoFheP").style.width =
-      r.pneumonia_score + "%";
-  }, 100);
-  document.getElementById("pctNoFheN").textContent =
-    r.normal_score + "%";
-  document.getElementById("pctNoFheP").textContent =
-    r.pneumonia_score + "%";
-  document.getElementById("attackDesc").textContent =
-    attack.description;
+  animBars('barNoFheN','pctNoFheN',r.normal_score,'barNoFheP','pctNoFheP',r.pneumonia_score);
+  document.getElementById('attackDesc').textContent = attack.description;
 }
 
+/* ── Render with FHE ── */
 function renderFhe(r, orig) {
-  // FHE shows original image with lock overlay
-  document.getElementById("imgFhe").src =
-    "data:image/png;base64," + orig.image_b64;
-  document.getElementById("imgFhe").style.display = "block";
-  document.getElementById("imgFhePlaceholder").style.display = "none";
+  show('imgFhe', 'data:image/png;base64,'+orig.image_b64, 'phFhe');
 
-  const cls = r.prediction === "Normal" ? "normal" : "pneumonia";
-  const col = r.prediction === "Normal" ? "#68d391" : "#fc8181";
-  document.getElementById("verdictFhe").className =
-    "verdict-sm " + cls;
-  document.getElementById("verdictFhe").innerHTML = `
-    <div style="font-size:16px;font-weight:700;color:${col}">
-      🔒 ${r.prediction}
-    </div>
-    <div style="font-size:12px;color:#a0aec0">
-      Confidence: ${r.confidence}%
-    </div>
-    <div style="font-size:11px;color:#68d391;margin-top:2px">
-      ✅ Attack had no effect
-    </div>`;
+  const cls = r.prediction === 'Normal' ? 'normal' : 'pneumonia';
+  const col = r.prediction === 'Normal' ? 'var(--emerald)' : 'var(--red)';
+  const vd  = document.getElementById('verdictFhe');
+  vd.className = 'rc-verdict ' + cls;
+  vd.innerHTML = `
+    <div class="rv-label" style="color:${col}">🔒 ${r.prediction}</div>
+    <div class="rv-conf">Confidence: ${r.confidence}%</div>
+    <div class="rv-note" style="color:var(--emerald)">✅ Attack had no effect</div>`;
 
-  setTimeout(() => {
-    document.getElementById("barFheN").style.width =
-      r.normal_score + "%";
-    document.getElementById("barFheP").style.width =
-      r.pneumonia_score + "%";
-  }, 100);
-  document.getElementById("pctFheN").textContent =
-    r.normal_score + "%";
-  document.getElementById("pctFheP").textContent =
-    r.pneumonia_score + "%";
+  animBars('barFheN','pctFheN',r.normal_score,'barFheP','pctFheP',r.pneumonia_score);
 }
 
+/* ── Render significance ── */
 function renderSignificance(data) {
-  const box     = document.getElementById("sigBox");
+  const box     = document.getElementById('sigBox');
   const changed = data.significance.attack_succeeded;
 
-  box.className = "sig-box " + (changed ? "danger" : "protected");
-  box.style.display = "block";
+  box.className = 'sig-box ' + (changed ? 'danger' : 'protected');
+  box.style.display = 'block';
 
-  document.getElementById("sigTitle").style.color =
-    changed ? "#fc8181" : "#68d391";
-  document.getElementById("sigTitle").textContent =
-    changed
-      ? "⚠️ FHE prevented misdiagnosis!"
-      : "✅ Both systems handled this attack — try stronger intensity";
+  document.getElementById('sigTitle').textContent = changed
+    ? '⚠️ FHE prevented misdiagnosis!'
+    : '✅ Both systems handled this attack — try stronger intensity';
+  document.getElementById('sigTitle').style.color = changed
+    ? 'var(--red)' : 'var(--teal)';
 
-  document.getElementById("sigMessage").textContent =
-    changed
-      ? `The ${data.attack.type} attack (level ${Math.round(data.attack.level*100)}%) changed the diagnosis from "${data.original.prediction}" to "${data.without_fhe.prediction}" when transmitted without encryption. With FHE, the image features were encrypted BEFORE transmission — the attacker only received a 326KB ciphertext and could not alter the underlying data. The correct diagnosis "${data.with_fhe.prediction}" was preserved.`
-      : `The attack changed image features by ${data.attack.feat_change}% but was not strong enough to flip the diagnosis. Try increasing the attack intensity slider or switching to a different attack type to see FHE's protective effect more clearly.`;
+  document.getElementById('sigMsg').textContent = changed
+    ? `The ${data.attack.type} attack (level ${Math.round(data.attack.level*100)}%) changed the diagnosis from "${data.original.prediction}" to "${data.without_fhe.prediction}" when transmitted without encryption. With FHE, the image features were encrypted BEFORE transmission — the attacker only received a 326KB ciphertext and could not alter the underlying data. The correct diagnosis "${data.with_fhe.prediction}" was preserved.`
+    : `The attack changed image features by ${data.attack.feat_change}% but was not strong enough to flip the diagnosis. Try increasing attack intensity or switching attack type.`;
 
-  document.getElementById("sigOrig").textContent =
-    data.original.prediction;
-  document.getElementById("sigNoFhe").textContent =
-    data.without_fhe.prediction;
-  document.getElementById("sigNoFhe").style.color =
-    changed ? "#fc8181" : "#68d391";
-  document.getElementById("sigFhe").textContent =
-    data.with_fhe.prediction;
-  document.getElementById("sigFeat").textContent =
-    data.attack.feat_change + "%";
+  document.getElementById('sigOrig').textContent   = data.original.prediction;
+  document.getElementById('sigNoFhe').textContent  = data.without_fhe.prediction;
+  document.getElementById('sigNoFhe').style.color  = changed ? 'var(--red)' : 'var(--emerald)';
+  document.getElementById('sigFhe').textContent    = data.with_fhe.prediction;
+  document.getElementById('sigFeat').textContent   = data.attack.feat_change + '%';
+
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+/* ── Helpers ── */
+function show(imgId, src, phId) {
+  const img = document.getElementById(imgId);
+  img.src = src; img.style.display = 'block';
+  document.getElementById(phId).style.display = 'none';
+}
+
+function animBars(nId, nPctId, nVal, pId, pPctId, pVal) {
+  setTimeout(() => {
+    document.getElementById(nId).style.width = nVal + '%';
+    document.getElementById(pId).style.width = pVal + '%';
+  }, 100);
+  document.getElementById(nPctId).textContent = nVal + '%';
+  document.getElementById(pPctId).textContent = pVal + '%';
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
 setStep(0);
 </script>
 </body>
