@@ -38,24 +38,36 @@ the **CKKS scheme** (Cheon-Kim-Kim-Song) implemented via TenSEAL.
 ---
 
 ## Pipeline
-Client                    Crypto Layer              Cloud Server
-â”‚                            â”‚                         â”‚
-â”‚  Upload Chest X-Ray        â”‚                         â”‚
-â”‚â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–º â”‚                         â”‚
-â”‚                            â”‚  Encrypt via CKKS       â”‚
-â”‚                            â”‚â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–º
-â”‚                            â”‚                         â”‚
-â”‚                            â”‚                    Run Linear
-â”‚                            â”‚                    Evaluation
-â”‚                            â”‚                    on Ciphertext
-â”‚                            â”‚                         â”‚
-â”‚                            â”‚  Encrypted Prediction   â”‚
-â”‚                            â”‚â—„â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-â”‚  Decrypt Result            â”‚                         â”‚
-â”‚â—„â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”‚                         â”‚
-â”‚                            â”‚                         â”‚
-Render Diagnosis
 
+Client                                          Cloud Server
+│                                                     │
+│  1. Upload Chest X-Ray                              │
+│                                                     │
+│  2. ResNet-18 extracts 512-dim feature vector       │
+│     (runs locally on client)                        │
+│                                                     │
+│  3. CKKS encrypts feature vector (TenSEAL)          │
+│     512 floats → 326 KB ciphertext                  │
+│                                                     │
+│  4. Send ciphertext over network ──────────────────►│
+│                                                     │
+│                                                     │  5. Receive ciphertext
+│                                                     │
+│                                                     │  6. W1 @ enc(x) + b1
+│                                                     │     W2 @ h    + b2
+│                                                     │     (on ciphertext only)
+│                                                     │     never decrypts
+│                                                     │
+│  8. Receive encrypted logits ◄─────────────────────│  7. Return encrypted logits
+│                                                     │
+│  9. Decrypt with secret key                         │
+│     (CKKS decryption — client only)                 │
+│                                                     │
+│  10. Apply softmax → probabilities                  │
+│                                                     │
+│  11. Render diagnosis                               │
+│      Normal / Pneumonia + confidence %              │
+│                                                     │
 ---
 
 ## Features
