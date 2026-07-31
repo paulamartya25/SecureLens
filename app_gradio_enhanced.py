@@ -87,21 +87,37 @@ def apply_attack(image, attack_type, intensity):
     intensity_val = intensity / 100.0
 
     if attack_type == "noise":
-        # EXTREME noise - will flip diagnosis
-        noise = np.random.normal(0, 100 * intensity_val, img_array.shape)
-        attacked = np.clip(img_array + noise, 0, 255).astype(np.uint8)
+        # NUCLEAR noise - 500x multiplier + salt & pepper
+        noise = np.random.normal(0, 500 * intensity_val, img_array.shape)
+        attacked = img_array + noise
+        # Add salt & pepper for extra destruction
+        salt_pepper_mask = np.random.random(img_array.shape) < (0.3 * intensity_val)
+        attacked[salt_pepper_mask] = np.random.choice([0, 255], size=np.sum(salt_pepper_mask))
+        attacked = np.clip(attacked, 0, 255).astype(np.uint8)
     elif attack_type == "brightness":
-        # EXTREME brightness - saturate to white
-        attacked = np.clip(img_array * (1 + 3.0 * intensity_val), 0, 255).astype(np.uint8)
+        # BLINDING brightness - 10x multiplier to completely saturate
+        attacked = np.clip(img_array * (1 + 10.0 * intensity_val), 0, 255).astype(np.uint8)
     elif attack_type == "blur":
-        # EXTREME blur
-        kernel_size = int(21 + 40 * intensity_val)
+        # OBLITERATING blur - massive kernel to destroy all features
+        kernel_size = int(51 + 100 * intensity_val)  # Up to 151 kernel!
         if kernel_size % 2 == 0:
             kernel_size += 1
         attacked = cv2.GaussianBlur(img_array, (kernel_size, kernel_size), 0)
     elif attack_type == "contrast":
-        # EXTREME darkness
-        attacked = np.clip(img_array * (0.1 + 0.3 * (1 - intensity_val)), 0, 255).astype(np.uint8)
+        # BLACKOUT - reduce to nearly black
+        attacked = np.clip(img_array * (0.01 + 0.1 * (1 - intensity_val)), 0, 255).astype(np.uint8)
+    elif attack_type == "combined":
+        # COMBINED ATTACK - noise + blur + brightness together (MOST DESTRUCTIVE!)
+        # Step 1: Add massive noise
+        noise = np.random.normal(0, 300 * intensity_val, img_array.shape)
+        attacked = np.clip(img_array + noise, 0, 255)
+        # Step 2: Blur heavily
+        kernel_size = int(41 + 60 * intensity_val)
+        if kernel_size % 2 == 0:
+            kernel_size += 1
+        attacked = cv2.GaussianBlur(attacked.astype(np.uint8), (kernel_size, kernel_size), 0)
+        # Step 3: Oversaturate brightness
+        attacked = np.clip(attacked * (1 + 3.0 * intensity_val), 0, 255).astype(np.uint8)
     else:
         attacked = img_array
 
@@ -373,7 +389,7 @@ with gr.Blocks(title="SecureLens") as demo:
             with gr.Row():
                 with gr.Column(scale=1):
                     attack_image = gr.Image(type='pil', label='Upload X-Ray', height=300)
-                    attack_type = gr.Radio(["noise", "brightness", "blur"], value="noise", label="Attack Type")
+                    attack_type = gr.Radio(["noise", "brightness", "blur", "contrast", "combined"], value="noise", label="Attack Type")
                     attack_intensity = gr.Slider(10, 90, value=30, label="Attack Intensity (%)")
                     attack_btn = gr.Button("⚔️ Run Attack Demo", variant="primary", size="lg")
                 with gr.Column(scale=2):
