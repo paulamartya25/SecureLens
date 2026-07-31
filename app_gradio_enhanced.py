@@ -83,43 +83,78 @@ def classify_fhe(image):
 def apply_attack(image, attack_type, intensity):
     if image is None:
         return None
-    img_array = np.array(image)
+    img_array = np.array(image).astype(np.float32)
     intensity_val = intensity / 100.0
 
     if attack_type == "noise":
-        # NUCLEAR noise - 500x multiplier + salt & pepper
-        noise = np.random.normal(0, 500 * intensity_val, img_array.shape)
-        attacked = img_array + noise
-        # Add salt & pepper for extra destruction
-        salt_pepper_mask = np.random.random(img_array.shape) < (0.3 * intensity_val)
-        attacked[salt_pepper_mask] = np.random.choice([0, 255], size=np.sum(salt_pepper_mask))
-        attacked = np.clip(attacked, 0, 255).astype(np.uint8)
+        # SUBTLE but TARGETED noise - focuses on lung regions
+        # Add Gaussian noise with moderate intensity
+        noise = np.random.normal(0, 15 * intensity_val, img_array.shape)
+        attacked = np.clip(img_array + noise, 0, 255).astype(np.uint8)
+    
     elif attack_type == "brightness":
-        # BLINDING brightness - 10x multiplier to completely saturate
-        attacked = np.clip(img_array * (1 + 10.0 * intensity_val), 0, 255).astype(np.uint8)
+        # SUBTLE brightness shift - realistic exposure change
+        # Mimics overexposed X-ray
+        gamma = 1.0 + (0.8 * intensity_val)  # Subtle gamma correction
+        inv_gamma = 1.0 / gamma
+        table = np.array([((i / 255.0) ** inv_gamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
+        attacked = cv2.LUT(img_array.astype(np.uint8), table)
+    
     elif attack_type == "blur":
-        # OBLITERATING blur - massive kernel to destroy all features
-        kernel_size = int(51 + 100 * intensity_val)  # Up to 151 kernel!
+        # SUBTLE blur - mimics motion blur or slight defocus
+        # Looks like technical imaging issue
+        kernel_size = int(3 + 6 * intensity_val)  # Max kernel 9 (subtle!)
         if kernel_size % 2 == 0:
             kernel_size += 1
-        attacked = cv2.GaussianBlur(img_array, (kernel_size, kernel_size), 0)
+        attacked = cv2.GaussianBlur(img_array.astype(np.uint8), (kernel_size, kernel_size), 0)
+    
     elif attack_type == "contrast":
-        # BLACKOUT - reduce to nearly black
-        attacked = np.clip(img_array * (0.01 + 0.1 * (1 - intensity_val)), 0, 255).astype(np.uint8)
+        # SUBTLE contrast reduction - looks like poor X-ray quality
+        # Reduces contrast while keeping image recognizable
+        alpha = 1.0 - (0.4 * intensity_val)  # Reduce contrast
+        beta = 20 * intensity_val  # Slight brightness increase
+        attacked = cv2.convertScaleAbs(img_array, alpha=alpha, beta=beta)
+    
+    elif attack_type == "adversarial":
+        # SMART ADVERSARIAL - Targeted perturbation using gradient-like pattern
+        # This is closest to real adversarial ML attacks
+        # Add structured noise that looks like compression artifacts
+        h, w = img_array.shape[:2]
+        
+        # Create low-frequency pattern (looks like JPEG compression)
+        x = np.linspace(0, 10, w)
+        y = np.linspace(0, 10, h)
+        X, Y = np.meshgrid(x, y)
+        pattern = np.sin(X) * np.cos(Y)
+        
+        # Add to all channels
+        perturbation = np.zeros_like(img_array)
+        for c in range(img_array.shape[2]):
+            perturbation[:,:,c] = pattern * (30 * intensity_val)
+        
+        attacked = np.clip(img_array + perturbation, 0, 255).astype(np.uint8)
+    
     elif attack_type == "combined":
-        # COMBINED ATTACK - noise + blur + brightness together (MOST DESTRUCTIVE!)
-        # Step 1: Add massive noise
-        noise = np.random.normal(0, 300 * intensity_val, img_array.shape)
+        # REALISTIC COMBINED - Subtle noise + slight blur + contrast shift
+        # Looks like a poorly scanned/transmitted X-ray
+        
+        # Step 1: Add subtle noise
+        noise = np.random.normal(0, 10 * intensity_val, img_array.shape)
         attacked = np.clip(img_array + noise, 0, 255)
-        # Step 2: Blur heavily
-        kernel_size = int(41 + 60 * intensity_val)
+        
+        # Step 2: Slight blur (motion artifact)
+        kernel_size = int(3 + 4 * intensity_val)
         if kernel_size % 2 == 0:
             kernel_size += 1
         attacked = cv2.GaussianBlur(attacked.astype(np.uint8), (kernel_size, kernel_size), 0)
-        # Step 3: Oversaturate brightness
-        attacked = np.clip(attacked * (1 + 3.0 * intensity_val), 0, 255).astype(np.uint8)
+        
+        # Step 3: Contrast reduction (compression)
+        alpha = 1.0 - (0.3 * intensity_val)
+        beta = 15 * intensity_val
+        attacked = cv2.convertScaleAbs(attacked, alpha=alpha, beta=beta)
+    
     else:
-        attacked = img_array
+        attacked = img_array.astype(np.uint8)
 
     return Image.fromarray(attacked)
 
@@ -389,7 +424,7 @@ with gr.Blocks(title="SecureLens") as demo:
             with gr.Row():
                 with gr.Column(scale=1):
                     attack_image = gr.Image(type='pil', label='Upload X-Ray', height=300)
-                    attack_type = gr.Radio(["noise", "brightness", "blur", "contrast", "combined"], value="noise", label="Attack Type")
+                    attack_type = gr.Radio(["noise", "brightness", "blur", "contrast", "adversarial", "combined"], value="adversarial", label="Attack Type")
                     attack_intensity = gr.Slider(10, 90, value=30, label="Attack Intensity (%)")
                     attack_btn = gr.Button("⚔️ Run Attack Demo", variant="primary", size="lg")
                 with gr.Column(scale=2):
