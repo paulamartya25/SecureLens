@@ -228,7 +228,7 @@ class CKKSEngine:
         return self.decrypt_vector(enc)
 
     def decrypt_prediction(
-        self, encrypted_output: ts.CKKSVector
+        self, encrypted_output
     ) -> dict:
         """
         Decrypts server's encrypted output and converts to
@@ -240,7 +240,9 @@ class CKKSEngine:
 
         Args:
             encrypted_output : encrypted logits from server
-                               (CKKSVector of length >= 2)
+                               Can be:
+                               - CKKSVector of length >= 2
+                               - list of CKKSVector (one per logit)
 
         Returns:
             dict:
@@ -250,15 +252,23 @@ class CKKSEngine:
               pneumonia_score: probability for Pneumonia
               raw            : raw decrypted logits
         """
-        raw = self.decrypt_vector(encrypted_output)
+        # Handle both list of CKKSVectors and single CKKSVector
+        if isinstance(encrypted_output, list):
+            # Decrypt each encrypted scalar logit
+            logits = np.array([vec.decrypt(self.context.secret_key())[0] for vec in encrypted_output], 
+                            dtype=np.float64)
+            raw = logits
+        else:
+            # Original format - single CKKSVector
+            raw = self.decrypt_vector(encrypted_output)
+            logits = raw[:2]
 
         # Softmax — stable version (subtract max for numerical stability)
-        logits   = raw[:2]
         exp_vals = np.exp(logits - np.max(logits))
         probs    = exp_vals / exp_vals.sum()
 
         result = {
-            "raw"            : raw.tolist(),
+            "raw"            : logits.tolist(),
             "normal_score"   : float(probs[0]),
             "pneumonia_score": float(probs[1]),
             "prediction"     : "Pneumonia" if probs[1] > probs[0] else "Normal",
@@ -279,13 +289,35 @@ class CKKSEngine:
 
         Args:
             ct_bytes : serialized encrypted logits from server
+                      Can be a single CKKSVector or list format
 
         Returns:
             same dict as decrypt_prediction()
         """
+        # Try to deserialize as a list first (new format)
+        # Format: first 4 bytes = number of vectors, then each serialized
+        try:
+            import struct
+            if len(ct_bytes) > 4:
+                n_vectors = struct.unpack('!I', ct_bytes[:4])[0]
+                if n_vectors == 2:  # Expected for binary classification
+                    # Deserialize list format
+                    offset = 4
+                    enc_list = []
+                    for _ in range(n_vectors):
+                        # Next 4 bytes = size of this vector
+                        size = struct.unpack('!I', ct_bytes[offset:offset+4])[0]
+                        offset += 4
+                        vec_bytes = ct_bytes[offset:offset+size]
+                        offset += size
+                        vec = ts.ckks_vector_from(self.context, vec_bytes)
+                        enc_list.append(vec)
+                    return self.decrypt_prediction(enc_list)
+        except:
+            pass
+        
+        # Fallback: old format (single CKKSVector)
         raw_values = self.decrypt_vector_from_bytes(ct_bytes)
-
-        # Repackage as a plain numpy result (not CKKSVector)
         logits   = raw_values[:2]
         exp_vals = np.exp(logits - np.max(logits))
         probs    = exp_vals / exp_vals.sum()
