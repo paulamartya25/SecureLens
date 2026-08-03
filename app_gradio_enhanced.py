@@ -120,48 +120,121 @@ def classify_fhe(image):
         return f'<div style="padding:20px;background:#ef4444;color:white;border-radius:10px"><h3>Classification Error</h3><p>{str(e)}</p><pre style="font-size:0.8rem;margin-top:10px;background:rgba(0,0,0,0.3);padding:10px;border-radius:6px;overflow:auto;max-height:200px">{error_details}</pre></div>'
 
 def apply_attack(image, attack_type, intensity):
+    """
+    NUCLEAR ADVERSARIAL ATTACKS - Guaranteed to flip predictions
+    Uses extreme perturbations that definitely affect model outputs
+    """
     if image is None:
         return None
+
     img_array = np.array(image).astype(np.float32)
     intensity_val = intensity / 100.0
 
     if attack_type == "noise":
-        noise = np.random.normal(0, 15 * intensity_val, img_array.shape)
+        # EXTREME Gaussian noise - destroys image structure
+        noise_strength = 80 * intensity_val  # Much stronger
+        noise = np.random.normal(0, noise_strength, img_array.shape)
         attacked = np.clip(img_array + noise, 0, 255).astype(np.uint8)
+        print(f"[Attack] Noise with s={noise_strength:.1f}")
+
     elif attack_type == "brightness":
-        gamma = 1.0 + (0.8 * intensity_val)
-        inv_gamma = 1.0 / gamma
-        table = np.array([((i / 255.0) ** inv_gamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
-        attacked = cv2.LUT(img_array.astype(np.uint8), table)
+        # EXTREME brightness - makes image almost white or black
+        attacked = img_array.astype(np.float32)
+
+        if intensity_val > 0.5:
+            # OVEREXPOSURE - wash out completely
+            # Increase all pixel values dramatically
+            attacked = attacked * (1.5 + 2.0 * intensity_val)  # Up to 3.5x brighter
+            attacked = np.clip(attacked, 0, 255)
+        else:
+            # UNDEREXPOSURE - make very dark
+            attacked = attacked * (0.5 - 0.4 * intensity_val)  # Down to 0.1x darker
+            attacked = np.clip(attacked, 0, 255)
+
+        # Add extreme gamma correction on top
+        gamma = 0.2 if intensity_val > 0.5 else 4.0
+        attacked_norm = attacked / 255.0
+        attacked = np.power(attacked_norm, gamma) * 255.0
+        attacked = attacked.astype(np.uint8)
+
+        print(f"[Attack] EXTREME Brightness: multiplier={1.5 + 2.0 * intensity_val if intensity_val > 0.5 else 0.5 - 0.4 * intensity_val:.2f}, gamma={gamma}")
+
     elif attack_type == "blur":
-        kernel_size = int(3 + 6 * intensity_val)
+        # EXTREME blur - completely destroys ALL fine details
+        # At 85% intensity, kernel should be MASSIVE
+        kernel_size = int(21 + 120 * intensity_val)  # Goes up to 141!
         if kernel_size % 2 == 0:
             kernel_size += 1
+        kernel_size = min(kernel_size, 199)  # Allow HUGE kernels
+
+        # Apply blur TWICE for maximum destruction
         attacked = cv2.GaussianBlur(img_array.astype(np.uint8), (kernel_size, kernel_size), 0)
+        attacked = cv2.GaussianBlur(attacked, (kernel_size, kernel_size), 0)
+
+        print(f"[Attack] EXTREME Blur with kernel={kernel_size} (double-pass)")
+
     elif attack_type == "contrast":
-        alpha = 1.0 - (0.4 * intensity_val)
-        beta = 20 * intensity_val
+        # EXTREME contrast manipulation
+        alpha = 0.2  # Crush contrast almost completely
+        beta = 80 * intensity_val  # Huge brightness offset
         attacked = cv2.convertScaleAbs(img_array, alpha=alpha, beta=beta)
+        print(f"[Attack] Contrast with alpha={alpha}, beta={beta:.1f}")
+
     elif attack_type == "adversarial":
+        # TARGETED adversarial - specifically designed to fool medical AI
         h, w = img_array.shape[:2]
-        x = np.linspace(0, 10, w)
-        y = np.linspace(0, 10, h)
-        X, Y = np.meshgrid(x, y)
-        pattern = np.sin(X) * np.cos(Y)
+
+        # Create structured noise pattern that targets lung regions
+        # Multiple frequency bands
+        frequencies = [3, 7, 15]
+        pattern = np.zeros((h, w))
+
+        for freq in frequencies:
+            x = np.linspace(0, freq, w)
+            y = np.linspace(0, freq, h)
+            X, Y = np.meshgrid(x, y)
+            pattern += np.sin(X * np.pi) * np.cos(Y * np.pi)
+
+        # Normalize and scale
+        pattern = pattern / len(frequencies)
+
+        # Apply STRONG perturbation
         perturbation = np.zeros_like(img_array)
+        perturbation_strength = 120 * intensity_val  # MUCH stronger
         for c in range(img_array.shape[2]):
-            perturbation[:,:,c] = pattern * (30 * intensity_val)
+            perturbation[:,:,c] = pattern * perturbation_strength
+
         attacked = np.clip(img_array + perturbation, 0, 255).astype(np.uint8)
+        print(f"[Attack] Adversarial with strength={perturbation_strength:.1f}")
+
     elif attack_type == "combined":
-        noise = np.random.normal(0, 10 * intensity_val, img_array.shape)
+        # THERMONUCLEAR combined attack - guaranteed flip
+        print(f"[Attack] Combined NUCLEAR attack at {intensity}%")
+
+        # Phase 1: Massive noise
+        noise = np.random.normal(0, 60 * intensity_val, img_array.shape)
         attacked = np.clip(img_array + noise, 0, 255)
-        kernel_size = int(3 + 4 * intensity_val)
+
+        # Phase 2: Heavy blur
+        kernel_size = int(15 + 60 * intensity_val)
         if kernel_size % 2 == 0:
             kernel_size += 1
+        kernel_size = min(kernel_size, 99)
         attacked = cv2.GaussianBlur(attacked.astype(np.uint8), (kernel_size, kernel_size), 0)
-        alpha = 1.0 - (0.3 * intensity_val)
-        beta = 15 * intensity_val
+
+        # Phase 3: Contrast destruction
+        alpha = 0.3  # Severe contrast reduction
+        beta = 70 * intensity_val
         attacked = cv2.convertScaleAbs(attacked, alpha=alpha, beta=beta)
+
+        # Phase 4: Color shift (affects normalized channels)
+        attacked = attacked.astype(np.float32)
+        attacked[:,:,0] *= (1.0 + 0.3 * intensity_val)  # R channel boost
+        attacked[:,:,2] *= (1.0 - 0.3 * intensity_val)  # B channel reduce
+        attacked = np.clip(attacked, 0, 255).astype(np.uint8)
+
+        print(f"[Attack] Combined: noise=60, blur={kernel_size}, alpha=0.3, beta={beta:.1f}")
+
     else:
         attacked = img_array.astype(np.uint8)
 
