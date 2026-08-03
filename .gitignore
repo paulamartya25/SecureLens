@@ -91,3 +91,10 @@ data/chest_xray/val/
 .Spotlight-V100
 .Trashes
 ehthumbs.db
+
+# Complete dataset (download from Kaggle)
+data/chest_xray/
+data/chest_xray/test/
+data/chest_xray/test/
+
+data/chest_xray/test/
