@@ -16,6 +16,7 @@ from sklearn.metrics import (
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+# Lazy loading - only load when first needed
 import seaborn as sns
 from torch.utils.data import DataLoader, Dataset
 
@@ -25,18 +26,28 @@ from cloud_server.encrypted_inference.he_inference import HEInferenceEngine
 from cloud_server.train_model_fhe_compatible import SecureLensNetFHE
 import tenseal as ts
 
-print('[SecureLens] Loading system...')
-model = SecureLensNetFHE(num_classes=2)
-model.load_state_dict(torch.load('cloud_server/models/best_model.pth', map_location='cpu'))
-model.eval()
-ckks = CKKSEngine(8192, [60, 40, 40, 60], 2**40)
-he_engine = HEInferenceEngine('cloud_server/models')
+# Lazy loading - only load when first needed
+model = None
+ckks = None
+he_engine = None
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ])
-print('[SecureLens] Ready!')
+
+def load_model():
+    """Load model on first use (lazy loading)"""
+    global model, ckks, he_engine
+    if model is None:
+        print('[SecureLens] Loading system...')
+        model = SecureLensNetFHE(num_classes=2)
+        model.load_state_dict(torch.load('cloud_server/models/best_model.pth', map_location='cpu'))
+        model.eval()
+        ckks = CKKSEngine(8192, [60, 40, 40, 60], 2**40)
+        he_engine = HEInferenceEngine('cloud_server/models')
+        print('[SecureLens] Ready!')
+    return model, ckks, he_engine
 
 class TestDataset(Dataset):
     """Simple test dataset for evaluation."""
@@ -78,6 +89,7 @@ def classify_fhe(image):
     if image is None:
         return '<p style="color:#FF4D6D;padding:20px">Upload an X-ray image first!</p>'
     try:
+        model, ckks, he_engine = load_model()
         if not isinstance(image, Image.Image):
             image = Image.fromarray(image).convert('RGB')
         img_tensor = transform(image).unsqueeze(0)
