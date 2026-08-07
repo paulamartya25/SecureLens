@@ -80,4 +80,13 @@ demo = gr.Interface(
 )
 
 if __name__ == '__main__':
-    demo.launch()
+    import os
+    # Get port from environment variable (for Render) or default to 7860
+    port = int(os.environ.get('PORT', 7860))
+    print(f"[SecureLens] Starting on port {port}")
+    demo.launch(
+        server_name='0.0.0.0',
+        server_port=port,
+        share=False,
+        show_error=True
+    )
