@@ -58,35 +58,21 @@ def classify_image(image):
 
         prediction = 'Normal' if pred_class == 0 else 'Pneumonia'
 
-        result = f"""
-**Prediction:** {prediction}
-**Confidence:** {confidence:.2%}
-
-This is a privacy-preserving pneumonia detection system using Fully Homomorphic Encryption (FHE).
-"""
+        result = 'Prediction: ' + prediction + '\nConfidence: ' + '{:.2%}'.format(confidence) + '\n\nThis is a privacy-preserving pneumonia detection system using Fully Homomorphic Encryption (FHE).'
         return result
 
     except Exception as e:
-        return f'Error: {str(e)}'
+        return 'Error: ' + str(e)
 
-# Create simple Gradio interface
+# Create simple Gradio interface - FIXED FOR GRADIO 2.9.4
 demo = gr.Interface(
     fn=classify_image,
-    inputs=gr.Image(type='pil', label='Upload Chest X-Ray'),
-    outputs=gr.Textbox(label='Result'),
+    inputs=gr.inputs.Image(type='pil', label='Upload Chest X-Ray'),
+    outputs=gr.outputs.Textbox(label='Result'),
     title='SecureLens - Privacy-Preserving Pneumonia Detection',
     description='Upload a chest X-ray image for FHE-encrypted analysis',
     examples=None
 )
 
 if __name__ == '__main__':
-    import os
-    # Get port from environment variable (for Render) or default to 7860
-    port = int(os.environ.get('PORT', 7860))
-    print(f"[SecureLens] Starting on port {port}")
-    demo.launch(
-        server_name='0.0.0.0',
-        server_port=port,
-        share=False,
-        show_error=True
-    )
+    demo.launch(server_name='0.0.0.0', server_port=7860, share=False)
