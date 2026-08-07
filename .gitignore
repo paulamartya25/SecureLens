@@ -98,3 +98,7 @@ data/chest_xray/test/
 data/chest_xray/test/
 
 data/chest_xray/test/
+
+data/chest_xray/test/*.zip
+
+.kiro/
