@@ -733,5 +733,5 @@ if __name__ == "__main__":
     print("[SecureLens] ✓ GradCAM")
     print("[SecureLens] ✓ Model Evaluation")
     print("[SecureLens] All features loaded!\n")
-    demo.launch(server_port=7861, share=False)
+    demo.launch(server_port=7861, share=False, theme=gr.themes.Soft())
 

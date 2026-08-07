@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: securelens
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
+    startCommand: "python app.py"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.12
+      - key: PORT
+        value: 7860
+    healthCheckPath: /
+    autoDeploy: true

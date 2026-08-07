@@ -1,43 +1,41 @@
-FROM python:3.11-slim
+# SecureLens - Docker Configuration
+# Use this for Fly.io, Cloud Run, or local Docker deployment
 
-LABEL maintainer="Amartya"
-LABEL description="SecureLens: Privacy-Preserving Medical Image Diagnostics using FHE"
+FROM python:3.10-slim
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    FLASK_APP=app.py \
-    FLASK_ENV=production
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
-    make \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create app directory
+# Set working directory
 WORKDIR /app
 
-# Copy requirements
+# Install system dependencies for OpenCV and build tools
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first (for better caching)
 COPY requirements.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
 
-# Create directories
-RUN mkdir -p client/uploads logs && \
-    chmod 755 client/uploads
+# Expose port (Render/Cloud Run will override with PORT env var)
+EXPOSE 7860
 
-# Expose port
-EXPOSE 5000
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV GRADIO_SERVER_NAME=0.0.0.0
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:5000/health')" || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:7860')"
 
-# Run application
+# Run the application
 CMD ["python", "app.py"]

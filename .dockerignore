@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+!README.md
+
+# Deployment files
+.kiro/
+deploy_to_render.ps1
+render.yaml
+
+# Logs and temp files
+*.log
+*.backup
+temp_*.png
+temp_*.jpg
+
+# Large dataset (download separately if needed)
+data/chest_xray/train/
+data/chest_xray/val/
+
+# Personal files
+Photos/
+WhatsApp*
+*.ppt
+*.pptx
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Keep only essential model files
+*.pth
+!cloud_server/models/best_model.pth

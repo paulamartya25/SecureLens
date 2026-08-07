@@ -1,3 +1,11 @@
+# Git LFS configuration for large model files
+# Install Git LFS: https://git-lfs.github.com/
+
+# Track PyTorch model files
 *.pth filter=lfs diff=lfs merge=lfs -text
-*.json filter=lfs diff=lfs merge=lfs -text
+*.pt filter=lfs diff=lfs merge=lfs -text
+# Track numpy arrays
 *.npy filter=lfs diff=lfs merge=lfs -text
+# Track large JSON files (if containing model weights)
+cloud_server/models/*.json filter=lfs diff=lfs merge=lfs -text
+*.json filter=lfs diff=lfs merge=lfs -text
