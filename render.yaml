@@ -9,7 +9,7 @@ services:
     startCommand: "python app.py"
     envVars:
       - key: PYTHON_VERSION
-        value: 3.10.12
+        value: 3.11.9
       - key: PORT
         value: 7860
     healthCheckPath: /
