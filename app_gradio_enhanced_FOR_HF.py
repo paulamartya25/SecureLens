@@ -6,6 +6,8 @@ import sys
 import os
 import cv2
 import time
+import base64
+import requests
 from PIL import Image
 from torchvision import transforms
 import torch.nn.functional as F
@@ -25,6 +27,70 @@ from crypto_layer.ckks_engine import CKKSEngine
 from cloud_server.encrypted_inference.he_inference import HEInferenceEngine
 from cloud_server.train_model_fhe_compatible import SecureLensNetFHE
 import tenseal as ts
+
+# ── TRUE FHE: Remote Inference Server ─────────────────────────────────────
+# The FHE server runs on a SEPARATE HF Space — physically different machine.
+# It has NO secret key and NEVER decrypts. Only does homomorphic computation.
+# This Gradio Space (client) holds the secret key — encrypts and decrypts.
+# Together they achieve TRUE physical client-server FHE separation.
+FHE_SERVER_URL = os.environ.get(
+    "FHE_SERVER_URL",
+    "https://paulamartya25-securelens-server.hf.space"
+)
+
+
+def fhe_server_infer(ckks: CKKSEngine, enc_features) -> dict:
+    """
+    Sends encrypted features to the remote FHE server for homomorphic inference.
+
+    TRUE FHE pipeline:
+      1. Serialize ciphertext (this Space — client)
+      2. Export public context — no secret key (safe to send)
+      3. POST both to remote FHE server (different machine)
+      4. Server runs W1@enc(x)+b1, W2@enc(h)+b2 on ciphertext
+      5. Server returns encrypted logits (never decrypts)
+      6. Client (this Space) decrypts with secret key
+
+    The secret key NEVER leaves this Space.
+    The server NEVER sees plaintext.
+    """
+    ct_bytes      = enc_features.serialize()
+    pub_ctx_bytes = ckks.get_public_context_bytes()
+
+    print(f"[Client→Server] Sending {len(ct_bytes)//1024} KB ciphertext to {FHE_SERVER_URL}")
+    print("[Client→Server] Public context sent — NO secret key inside")
+
+    try:
+        response = requests.post(
+            f"{FHE_SERVER_URL}/api/predict_encrypted",
+            files={
+                "ciphertext"    : ("ct.bin",  ct_bytes,      "application/octet-stream"),
+                "public_context": ("ctx.bin", pub_ctx_bytes, "application/octet-stream"),
+            },
+            timeout=120,
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        if not data.get("success"):
+            raise RuntimeError(data.get("error", "Unknown server error"))
+
+        result_bytes = base64.b64decode(data["encrypted_result_b64"])
+        print(f"[Server→Client] Received {len(result_bytes)//1024} KB encrypted logits")
+        print("[Client] Decrypting with SECRET KEY (client-side only)...")
+
+        result = ckks.decrypt_prediction_from_bytes(result_bytes)
+        result["true_fhe"]   = True
+        result["server_saw"] = "Ciphertext only — ZERO plaintext"
+        result["server_url"] = FHE_SERVER_URL
+        return result
+
+    except requests.exceptions.ConnectionError:
+        print(f"[WARNING] FHE server unreachable at {FHE_SERVER_URL}. Falling back to in-process simulation.")
+        return None
+    except requests.exceptions.Timeout:
+        print("[WARNING] FHE server timed out. Falling back to in-process simulation.")
+        return None
 
 # Lazy loading - only load when first needed
 model = None
@@ -96,10 +162,16 @@ def classify_fhe(image):
         with torch.no_grad():
             features = model.get_backbone_features(img_tensor)
         features_np = features.squeeze().numpy().astype(np.float64)
+        # CLIENT: Encrypt features with secret key (features stay encrypted)
         enc_features = ckks.encrypt_feature_vector(features_np.copy())
-        enc_features_server = ts.ckks_vector_from(ckks.public_context, enc_features.serialize())
-        enc_result = he_engine.infer_head(enc_features_server, ckks.public_context)
-        result = ckks.decrypt_prediction(enc_result)
+        # TRUE FHE: Send ciphertext to REMOTE server for homomorphic inference
+        result = fhe_server_infer(ckks, enc_features)
+        if result is None:
+            # Fallback: in-process simulation if server unreachable
+            enc_features_server = ts.ckks_vector_from(ckks.public_context, enc_features.serialize())
+            enc_result = he_engine.infer_head(enc_features_server, ckks.public_context)
+            result = ckks.decrypt_prediction(enc_result)
+            result["true_fhe"] = False
 
         diagnosis = result['prediction']
         confidence = result['confidence']
@@ -264,8 +336,11 @@ def run_attack(image, attack_type, intensity):
             features = model.get_backbone_features(img_tensor)
         features_np = features.squeeze().numpy().astype(np.float64)
         enc_f = ckks.encrypt_feature_vector(features_np.copy())
-        enc_s = ts.ckks_vector_from(ckks.public_context, enc_f.serialize())
-        orig_result = ckks.decrypt_prediction(he_engine.infer_head(enc_s, ckks.public_context))
+        # TRUE FHE: remote server inference
+        orig_result = fhe_server_infer(ckks, enc_f)
+        if orig_result is None:
+            enc_s = ts.ckks_vector_from(ckks.public_context, enc_f.serialize())
+            orig_result = ckks.decrypt_prediction(he_engine.infer_head(enc_s, ckks.public_context))
 
         attacked_image = apply_attack(image, attack_type, intensity)
 
@@ -385,8 +460,11 @@ def run_comparison(image):
             features = model.get_backbone_features(img_tensor)
         features_np = features.squeeze().numpy().astype(np.float64)
         enc_f = ckks.encrypt_feature_vector(features_np.copy())
-        enc_s = ts.ckks_vector_from(ckks.public_context, enc_f.serialize())
-        fhe_result = ckks.decrypt_prediction(he_engine.infer_head(enc_s, ckks.public_context))
+        # TRUE FHE: remote server inference
+        fhe_result = fhe_server_infer(ckks, enc_f)
+        if fhe_result is None:
+            enc_s = ts.ckks_vector_from(ckks.public_context, enc_f.serialize())
+            fhe_result = ckks.decrypt_prediction(he_engine.infer_head(enc_s, ckks.public_context))
         fhe_time = (time.time() - start_fhe) * 1000
 
         start_trad = time.time()
