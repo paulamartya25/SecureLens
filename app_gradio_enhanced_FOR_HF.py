@@ -39,6 +39,54 @@ FHE_SERVER_URL = os.environ.get(
 )
 
 
+def warm_up_server() -> str:
+    """
+    Pings the Render FHE server health endpoint.
+    Returns a status HTML string for the UI.
+    Wakes the server if it was sleeping.
+    """
+    try:
+        t0 = time.time()
+        r  = requests.get(f"{FHE_SERVER_URL}/health", timeout=60)
+        ms = int((time.time() - t0) * 1000)
+        if r.status_code == 200:
+            data = r.json()
+            return f"""
+            <div style="background:rgba(0,255,136,0.1);border:2px solid #00FF88;
+                        border-radius:12px;padding:20px;text-align:center">
+                <div style="font-size:2rem">🟢</div>
+                <h3 style="color:#00FF88;margin:8px 0">FHE Server Online</h3>
+                <p style="color:#94a3b8">Response time: {ms}ms</p>
+                <p style="color:#94a3b8">Weights: W1{data.get('W1_shape','?')} W2{data.get('W2_shape','?')}</p>
+                <p style="color:#00FF88;font-weight:700">Secret key on server: ❌ None</p>
+                <p style="color:#64748b;font-size:0.85rem">Ready for TRUE FHE inference ✓</p>
+            </div>"""
+        else:
+            return f'<div style="background:rgba(255,77,109,0.1);border:2px solid #FF4D6D;border-radius:12px;padding:20px;text-align:center"><div style="font-size:2rem">🔴</div><h3 style="color:#FF4D6D">Server Error {r.status_code}</h3></div>'
+    except requests.exceptions.Timeout:
+        return '<div style="background:rgba(255,165,0,0.1);border:2px solid #FFA500;border-radius:12px;padding:20px;text-align:center"><div style="font-size:2rem">⏳</div><h3 style="color:#FFA500">Server Waking Up...</h3><p style="color:#94a3b8">Render free tier cold start (~30-50s). Please wait and try again.</p></div>'
+    except Exception as e:
+        return f'<div style="background:rgba(255,77,109,0.1);border:2px solid #FF4D6D;border-radius:12px;padding:20px;text-align:center"><div style="font-size:2rem">🔴</div><h3 style="color:#FF4D6D">Cannot Reach Server</h3><p style="color:#94a3b8">{str(e)}</p></div>'
+
+
+def _keep_alive_loop():
+    """Background thread: pings server every 10 min to prevent Render cold starts."""
+    import threading
+    while True:
+        try:
+            requests.get(f"{FHE_SERVER_URL}/health", timeout=30)
+            print(f"[Keep-Alive] Pinged {FHE_SERVER_URL} — server stays warm")
+        except Exception:
+            pass
+        time.sleep(600)  # 10 minutes
+
+# Start keep-alive background thread immediately on app load
+import threading
+_ka_thread = threading.Thread(target=_keep_alive_loop, daemon=True)
+_ka_thread.start()
+print(f"[Keep-Alive] Background thread started — pinging {FHE_SERVER_URL} every 10 min")
+
+
 def fhe_server_infer(ckks: CKKSEngine, enc_features) -> dict:
     """
     Sends encrypted features to the remote FHE server for homomorphic inference.
@@ -742,6 +790,24 @@ with gr.Blocks(title="SecureLens", css=custom_css) as demo:
     with gr.Tabs():
         with gr.Tab("🔒 TRUE FHE Classification"):
             gr.Markdown("### Upload X-Ray for Encrypted Analysis")
+
+            # ── Server Status Row ──────────────────────────────────────
+            with gr.Row():
+                with gr.Column(scale=2):
+                    server_status = gr.HTML("""
+                    <div style="background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.3);
+                                border-radius:12px;padding:16px;text-align:center">
+                        <span style="color:#94a3b8">⚪ Server status unknown — click Wake Server to check</span>
+                    </div>""")
+                with gr.Column(scale=1):
+                    wake_btn = gr.Button("⚡ Wake / Check Server", variant="secondary", size="sm")
+                    gr.Markdown("""
+                    <div style="color:#64748b;font-size:0.8rem;padding:4px">
+                    💡 Click this first before your demo or interview.
+                    Wakes the server if sleeping (~30s). After that, inference is fast.
+                    </div>""")
+            wake_btn.click(fn=warm_up_server, inputs=[], outputs=server_status)
+
             with gr.Row():
                 with gr.Column(scale=1):
                     fhe_image = gr.Image(type='pil', label='Upload Chest X-Ray', height=400)
