@@ -35,7 +35,7 @@ import tenseal as ts
 # Together they achieve TRUE physical client-server FHE separation.
 FHE_SERVER_URL = os.environ.get(
     "FHE_SERVER_URL",
-    "https://paulamartya25-amartya-2509.hf.space"
+    "https://securelens-1-m5kt.onrender.com"
 )
 
 
