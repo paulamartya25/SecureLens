@@ -132,22 +132,6 @@ ReLU requires value comparison on ciphertext — computationally intractable in 
 
 ---
 
-## 🔒 FHE Security Audit
-
-**Every `.decrypt()` call in the entire codebase — tracked and verified:**
-
-| File | `.decrypt()` calls | Who? | Verdict |
-|------|-------------------|------|---------|
-| `server/server_fhe.py` (Render) | ❌ **ZERO** | — | ✅ TRUE FHE |
-| `cloud_server/encrypted_inference/he_inference.py` | ❌ **ZERO** | — | ✅ TRUE FHE |
-| `crypto_layer/ckks_engine.py` | ✅ Yes | Client only, needs secret key | ✅ Correct by design |
-| `cloud_server/server.py /api/predict` | ✅ Yes | Demo endpoint only, clearly marked | ⚠️ Demo, not used in production |
-| `benchmark.py`, `proof_of_correctness.py` | ✅ Yes | Offline tools, never deployed | ✅ Verification only |
-
-**The Render.com server has zero secret key and zero decrypt calls — verified.**
-
----
-
 ## 📁 Project Structure
 
 ```
