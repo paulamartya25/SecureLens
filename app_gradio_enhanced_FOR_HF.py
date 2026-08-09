@@ -258,6 +258,7 @@ def run_attack(image, attack_type, intensity):
         if not isinstance(image, Image.Image):
             image = Image.fromarray(image).convert('RGB')
 
+        model, ckks, he_engine = load_model()
         img_tensor = transform(image).unsqueeze(0)
         with torch.no_grad():
             features = model.get_backbone_features(img_tensor)
@@ -377,6 +378,7 @@ def run_comparison(image):
         if not isinstance(image, Image.Image):
             image = Image.fromarray(image).convert('RGB')
 
+        model, ckks, he_engine = load_model()
         start_fhe = time.time()
         img_tensor = transform(image).unsqueeze(0)
         with torch.no_grad():
@@ -452,6 +454,7 @@ def generate_gradcam(image):
         if not isinstance(image, Image.Image):
             image = Image.fromarray(image).convert('RGB')
 
+        model, ckks, he_engine = load_model()
         img_tensor = transform(image).unsqueeze(0)
         img_tensor.requires_grad = True
 
@@ -556,6 +559,7 @@ def evaluate_model():
         all_preds = []
         all_probs = []
 
+        model, ckks, he_engine = load_model()
         model.eval()
         with torch.no_grad():
             for images, labels in test_loader:
@@ -733,5 +737,5 @@ if __name__ == "__main__":
     print("[SecureLens] ✓ GradCAM")
     print("[SecureLens] ✓ Model Evaluation")
     print("[SecureLens] All features loaded!\n")
-    demo.launch(server_port=7861, share=False, theme=gr.themes.Soft())
+    demo.launch(server_name="0.0.0.0", server_port=7860, share=False)
 

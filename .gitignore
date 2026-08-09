@@ -73,35 +73,21 @@ WhatsApp*.jpg
 .kiro/
 
 # Dataset (too large for git)
-data/chest_xray/train/
-data/chest_xray/val/
+data/chest_xray/
 
-# Models (track only specific ones)
+# Models - ignore all except the ones we need
 *.pth
 !cloud_server/models/best_model.pth
+!cloud_server/models/best_model_fhe.pth
+!cloud_server/models/securelens_fhe.pth
+!cloud_server/models/securelens_full.pth
 *.pt
 *.h5
 *.keras
 *.onnx
 
 # OS
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
 ehthumbs.db
 
-# Complete dataset (download from Kaggle)
-data/chest_xray/
-data/chest_xray/test/
-data/chest_xray/test/
-
-data/chest_xray/test/
-
-data/chest_xray/test/*.zip
-
-.kiro/
-data/chest_xray/
+# Archives
 *.zip
-.kiro/

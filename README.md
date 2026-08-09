@@ -1,11 +1,10 @@
 ---
 title: SecureLens
-emoji: 🔐
+emoji: 🔒
 colorFrom: blue
-colorTo: green
-sdk: gradio
-sdk_version: 4.44.1
-app_file: app.py
+colorTo: purple
+sdk: docker
+app_port: 7860
 pinned: false
 license: mit
 ---
@@ -26,30 +25,12 @@ Secure medical diagnosis using CKKS encryption - analyze X-rays without exposing
 
 ## 🚀 Deployment
 
-SecureLens can be deployed to multiple platforms:
-
-### Hugging Face Spaces (Current)
-✅ Already deployed - Live demo available
-
-### Render (Recommended)
-Quick deployment with one command:
-```bash
-.\deploy_to_render.ps1
-```
-See [RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md) for detailed instructions.
-
-### Other Platforms
-- Railway.app
-- Fly.io
-- Google Cloud Run
-- Azure Container Instances
-
-See [DEPLOYMENT_OPTIONS.md](DEPLOYMENT_OPTIONS.md) for complete comparison.
+SecureLens is deployed on Hugging Face Spaces using Docker SDK.
 
 ## 🛠️ Technology Stack
 
 - **Encryption**: TenSEAL (CKKS) - 128-bit security
 - **Deep Learning**: PyTorch, ResNet-18
-- **Interface**: Gradio 4.44.1
+- **Interface**: Gradio
 - **Model**: FHE-compatible neural network
 - **Dataset**: Chest X-Ray Pneumonia Detection
