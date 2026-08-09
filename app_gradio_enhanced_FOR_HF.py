@@ -58,7 +58,6 @@ def warm_up_server() -> str:
                 <h3 style="color:#00FF88;margin:8px 0">FHE Server Online</h3>
                 <p style="color:#94a3b8">Response time: {ms}ms</p>
                 <p style="color:#94a3b8">Weights: W1{data.get('W1_shape','?')} W2{data.get('W2_shape','?')}</p>
-                <p style="color:#00FF88;font-weight:700">Secret key on server: ❌ None</p>
                 <p style="color:#64748b;font-size:0.85rem">Ready for TRUE FHE inference ✓</p>
             </div>"""
         else:
