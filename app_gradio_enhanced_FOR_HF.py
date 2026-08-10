@@ -671,30 +671,69 @@ def evaluate_model():
     try:
         print("[Evaluation] Starting...")
 
-        data_dir = os.path.join(os.path.dirname(__file__), 'data', 'chest_xray')
-        if not os.path.exists(data_dir):
-            return None, '<p style="color:#FF4D6D;padding:20px">Dataset not found at data/chest_xray/test/</p>'
-
-        test_dataset = TestDataset(data_dir, transform)
-        test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=0)
-
-        print(f"[Evaluation] Loaded {len(test_dataset)} test images")
-
-        all_labels = []
-        all_preds = []
-        all_probs = []
-
         model, ckks, he_engine = load_model()
         model.eval()
-        with torch.no_grad():
-            for images, labels in test_loader:
-                outputs = model(images)
-                probs = F.softmax(outputs, dim=1)
-                preds = torch.argmax(probs, dim=1)
 
-                all_labels.extend(labels.cpu().numpy())
-                all_preds.extend(preds.cpu().numpy())
-                all_probs.extend(probs[:, 1].cpu().numpy())
+        all_labels = []
+        all_preds  = []
+        all_probs  = []
+
+        # ── Try local dataset first ───────────────────────────────────────
+        data_dir = os.path.join(os.path.dirname(__file__), 'data', 'chest_xray')
+        test_dir = os.path.join(data_dir, 'test')
+
+        if os.path.exists(test_dir):
+            print("[Evaluation] Using local dataset...")
+            test_dataset = TestDataset(data_dir, transform)
+            test_loader  = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=0)
+            print(f"[Evaluation] Loaded {len(test_dataset)} test images from local")
+
+            with torch.no_grad():
+                for images, labels in test_loader:
+                    outputs = model(images)
+                    probs   = F.softmax(outputs, dim=1)
+                    preds   = torch.argmax(probs, dim=1)
+                    all_labels.extend(labels.cpu().numpy())
+                    all_preds.extend(preds.cpu().numpy())
+                    all_probs.extend(probs[:, 1].cpu().numpy())
+
+        else:
+            # ── Auto-download from HuggingFace Hub ────────────────────────
+            print("[Evaluation] Local dataset not found. Downloading from HuggingFace Hub...")
+            print("[Evaluation] Dataset: keremberke/chest-xray-classification (test split)")
+
+            try:
+                from datasets import load_dataset
+            except ImportError:
+                return None, '<p style="color:#FF4D6D;padding:20px">Please add <code>datasets</code> to requirements.txt</p>'
+
+            hf_ds = load_dataset(
+                "keremberke/chest-xray-classification",
+                "full",
+                split="test",
+                trust_remote_code=True
+            )
+            print(f"[Evaluation] Downloaded {len(hf_ds)} test samples from HF Hub")
+
+            # keremberke dataset: label 0=NORMAL, 1=PNEUMONIA
+            with torch.no_grad():
+                for item in hf_ds:
+                    try:
+                        img = item["image"].convert("RGB")
+                        img_t = transform(img).unsqueeze(0)
+                        outputs = model(img_t)
+                        probs   = F.softmax(outputs, dim=1)
+                        pred    = torch.argmax(probs, dim=1).item()
+                        label   = int(item["labels"])
+
+                        all_labels.append(label)
+                        all_preds.append(pred)
+                        all_probs.append(float(probs[0, 1]))
+                    except Exception:
+                        continue
+
+            print(f"[Evaluation] Processed {len(all_labels)} images successfully")
+
 
         all_labels = np.array(all_labels)
         all_preds = np.array(all_preds)
