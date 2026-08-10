@@ -904,22 +904,22 @@ with gr.Blocks(title="SecureLens", css=custom_css) as demo:
                 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">
                     <div style="background:rgba(0,255,136,0.08);border:2px solid rgba(0,255,136,0.4);border-radius:14px;padding:22px;text-align:center">
                         <div style="color:#00FF88;font-size:0.85rem;font-weight:600;letter-spacing:1px;margin-bottom:6px">ACCURACY</div>
-                        <div style="font-size:2.8rem;font-weight:800;color:#00FF88">89.4%</div>
-                        <div style="color:#64748b;font-size:0.8rem;margin-top:4px">556 / 624 correct</div>
+                        <div style="font-size:2.8rem;font-weight:800;color:#00FF88">91.19%</div>
+                        <div style="color:#64748b;font-size:0.8rem;margin-top:4px">569 / 624 correct</div>
                     </div>
                     <div style="background:rgba(0,212,255,0.08);border:2px solid rgba(0,212,255,0.4);border-radius:14px;padding:22px;text-align:center">
                         <div style="color:#00D4FF;font-size:0.85rem;font-weight:600;letter-spacing:1px;margin-bottom:6px">PRECISION (PPV)</div>
-                        <div style="font-size:2.8rem;font-weight:800;color:#00D4FF">85.8%</div>
+                        <div style="font-size:2.8rem;font-weight:800;color:#00D4FF">87.81%</div>
                         <div style="color:#64748b;font-size:0.8rem;margin-top:4px">Of predicted Pneumonia</div>
                     </div>
                     <div style="background:rgba(255,215,0,0.08);border:2px solid rgba(255,215,0,0.4);border-radius:14px;padding:22px;text-align:center">
                         <div style="color:#FFD700;font-size:0.85rem;font-weight:600;letter-spacing:1px;margin-bottom:6px">RECALL (SENSITIVITY)</div>
-                        <div style="font-size:2.8rem;font-weight:800;color:#FFD700">99.5%</div>
+                        <div style="font-size:2.8rem;font-weight:800;color:#FFD700">99.74%</div>
                         <div style="color:#64748b;font-size:0.8rem;margin-top:4px">Catches almost all cases</div>
                     </div>
                     <div style="background:rgba(138,43,226,0.08);border:2px solid rgba(138,43,226,0.4);border-radius:14px;padding:22px;text-align:center">
                         <div style="color:#BA55D3;font-size:0.85rem;font-weight:600;letter-spacing:1px;margin-bottom:6px">F1 SCORE</div>
-                        <div style="font-size:2.8rem;font-weight:800;color:#BA55D3">92.2%</div>
+                        <div style="font-size:2.8rem;font-weight:800;color:#BA55D3">93.40%</div>
                         <div style="color:#64748b;font-size:0.8rem;margin-top:4px">Harmonic mean P/R</div>
                     </div>
                 </div>
@@ -928,13 +928,13 @@ with gr.Blocks(title="SecureLens", css=custom_css) as demo:
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
                     <div style="background:rgba(0,212,255,0.05);border:2px solid rgba(0,212,255,0.3);border-radius:14px;padding:24px;text-align:center">
                         <div style="color:#00D4FF;font-size:0.9rem;font-weight:600;margin-bottom:8px">ROC-AUC Score</div>
-                        <div style="font-size:3.5rem;font-weight:900;color:#00D4FF">0.9716</div>
+                        <div style="font-size:3.5rem;font-weight:900;color:#00D4FF">0.9656</div>
                         <div style="color:#64748b;font-size:0.85rem;margin-top:6px">Excellent discriminative ability</div>
                     </div>
                     <div style="background:rgba(0,255,136,0.05);border:2px solid rgba(0,255,136,0.3);border-radius:14px;padding:24px;text-align:center">
-                        <div style="color:#00FF88;font-size:0.9rem;font-weight:600;margin-bottom:8px">Specificity (NPV)</div>
-                        <div style="font-size:3.5rem;font-weight:900;color:#00FF88">72.7%</div>
-                        <div style="color:#64748b;font-size:0.85rem;margin-top:6px">Negative Predictive Value: 98.8%</div>
+                        <div style="color:#00FF88;font-size:0.9rem;font-weight:600;margin-bottom:8px">Specificity</div>
+                        <div style="font-size:3.5rem;font-weight:900;color:#00FF88">76.92%</div>
+                        <div style="color:#64748b;font-size:0.85rem;margin-top:6px">TN / (TN + FP) = 180/234</div>
                     </div>
                 </div>
 
@@ -946,14 +946,14 @@ with gr.Blocks(title="SecureLens", css=custom_css) as demo:
                         <div style="color:#94a3b8;font-weight:600;padding:8px">Pred: Normal</div>
                         <div style="color:#94a3b8;font-weight:600;padding:8px">Pred: Pneumonia</div>
                         <div style="color:#94a3b8;font-weight:600;padding:8px">True: Normal</div>
-                        <div style="background:rgba(0,255,136,0.2);border:2px solid #00FF88;border-radius:10px;padding:16px;font-size:1.8rem;font-weight:800;color:#00FF88">170<br><span style="font-size:0.75rem;color:#64748b">TN</span></div>
-                        <div style="background:rgba(255,77,109,0.15);border:2px solid #FF4D6D;border-radius:10px;padding:16px;font-size:1.8rem;font-weight:800;color:#FF4D6D">64<br><span style="font-size:0.75rem;color:#64748b">FP</span></div>
+                        <div style="background:rgba(0,255,136,0.2);border:2px solid #00FF88;border-radius:10px;padding:16px;font-size:1.8rem;font-weight:800;color:#00FF88">180<br><span style="font-size:0.75rem;color:#64748b">TN</span></div>
+                        <div style="background:rgba(255,77,109,0.15);border:2px solid #FF4D6D;border-radius:10px;padding:16px;font-size:1.8rem;font-weight:800;color:#FF4D6D">54<br><span style="font-size:0.75rem;color:#64748b">FP</span></div>
                         <div style="color:#94a3b8;font-weight:600;padding:8px">True: Pneumonia</div>
-                        <div style="background:rgba(255,165,0,0.15);border:2px solid #FFA500;border-radius:10px;padding:16px;font-size:1.8rem;font-weight:800;color:#FFA500">2<br><span style="font-size:0.75rem;color:#64748b">FN</span></div>
-                        <div style="background:rgba(0,255,136,0.2);border:2px solid #00FF88;border-radius:10px;padding:16px;font-size:1.8rem;font-weight:800;color:#00FF88">388<br><span style="font-size:0.75rem;color:#64748b">TP</span></div>
+                        <div style="background:rgba(255,165,0,0.15);border:2px solid #FFA500;border-radius:10px;padding:16px;font-size:1.8rem;font-weight:800;color:#FFA500">1<br><span style="font-size:0.75rem;color:#64748b">FN</span></div>
+                        <div style="background:rgba(0,255,136,0.2);border:2px solid #00FF88;border-radius:10px;padding:16px;font-size:1.8rem;font-weight:800;color:#00FF88">389<br><span style="font-size:0.75rem;color:#64748b">TP</span></div>
                     </div>
                     <p style="color:#64748b;font-size:0.85rem;text-align:center;margin-top:12px">
-                        Only 2 false negatives — the model almost never misses a Pneumonia case ✅
+                        Only <strong style="color:#00FF88">1 false negative</strong> out of 390 Pneumonia cases — model misses almost nothing ✅
                     </p>
                 </div>
 
@@ -989,7 +989,7 @@ with gr.Blocks(title="SecureLens", css=custom_css) as demo:
                 </div>
 
                 <p style="color:#4A6080;font-size:0.78rem;margin-top:16px;text-align:center">
-                    Metrics computed on Chest X-Ray Pneumonia test set using best_model.pth · ResNet-18 + FHE-compatible linear head
+                    Metrics computed fresh on Chest X-Ray Pneumonia test set (624 images) using retrained best_model.pth · ResNet-18 + FHE-compatible linear head
                 </p>
             </div>
             """)
