@@ -18,5 +18,3 @@ opencv-python-headless==4.8.0.76
 tqdm==4.65.0
 scipy==1.11.1
 requests==2.31.0
-pyarrow==13.0.0
-datasets==2.14.5
