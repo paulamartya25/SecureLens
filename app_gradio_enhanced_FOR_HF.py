@@ -379,32 +379,18 @@ h1, h2, h3 {
 /* ── Footer ─────────────────────────────────────────────── */
 .footer { display: none !important; }
 
-/* ── Sparkle cursor ──────────────────────────────────────── */
-* { cursor: none !important; }
-
-#cursor-dot {
-    position: fixed;
-    width: 8px; height: 8px;
-    background: #ffffff;
-    border-radius: 50%;
-    pointer-events: none;
-    z-index: 999999;
-    transform: translate(-50%, -50%);
-    transition: width 0.15s, height 0.15s, background 0.15s;
-    box-shadow: 0 0 6px #fff, 0 0 12px #00D4FF;
-}
-
+/* ── Sparkle cursor — glow orb + particles over real cursor ── */
 #cursor-glow {
     position: fixed;
-    width: 36px; height: 36px;
+    width: 32px; height: 32px;
     border-radius: 50%;
     pointer-events: none;
     z-index: 999998;
     transform: translate(-50%, -50%);
-    background: radial-gradient(circle, rgba(0,212,255,0.55) 0%, rgba(0,212,255,0.15) 45%, transparent 70%);
-    box-shadow: 0 0 22px rgba(0,212,255,0.50), 0 0 60px rgba(0,212,255,0.18);
+    background: radial-gradient(circle, rgba(0,212,255,0.60) 0%, rgba(0,212,255,0.18) 45%, transparent 70%);
+    box-shadow: 0 0 20px rgba(0,212,255,0.55), 0 0 55px rgba(0,212,255,0.20);
     mix-blend-mode: screen;
-    transition: width 0.2s, height 0.2s;
+    transition: width 0.2s, height 0.2s, box-shadow 0.2s;
 }
 
 .sparkle-particle {
@@ -412,14 +398,9 @@ h1, h2, h3 {
     border-radius: 50%;
     pointer-events: none;
     z-index: 999997;
-    transform: translate(-50%, -50%);
-}
-
-@keyframes sparkle-out {
-    0%   { opacity: 1; transform: translate(-50%,-50%) scale(1); }
-    100% { opacity: 0; transform: translate(-50%,-50%) scale(0); }
 }
 """
+
 
 
 
@@ -1048,67 +1029,62 @@ def evaluate_model():
         return None, f'<div style="padding:20px;background:#ef4444;color:white;border-radius:10px"><h3>Error</h3><p>{str(e)}</p><pre>{traceback.format_exc()}</pre></div>'
 sparkle_js = """
 function() {
-    // ── Sparkle cursor ──────────────────────────────────
-    var dot = document.createElement('div');
-    dot.id = 'cursor-dot';
-    dot.style.cssText = 'position:fixed;width:8px;height:8px;background:#fff;border-radius:50%;pointer-events:none;z-index:999999;transform:translate(-50%,-50%);box-shadow:0 0 6px #fff,0 0 14px #00D4FF;transition:width .15s,height .15s;';
-    document.body.appendChild(dot);
-
+    // ── Sparkle cursor — glow + particles on top of REAL cursor ──
     var glow = document.createElement('div');
     glow.id = 'cursor-glow';
-    glow.style.cssText = 'position:fixed;width:36px;height:36px;border-radius:50%;pointer-events:none;z-index:999998;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(0,212,255,.55) 0%,rgba(0,212,255,.15) 45%,transparent 70%);box-shadow:0 0 22px rgba(0,212,255,.5),0 0 60px rgba(0,212,255,.18);mix-blend-mode:screen;transition:width .2s,height .2s,box-shadow .2s;';
     document.body.appendChild(glow);
 
     var mouseX=0, mouseY=0, glowX=0, glowY=0, lastT=0;
 
     document.addEventListener('mousemove', function(e){
         mouseX = e.clientX; mouseY = e.clientY;
-        dot.style.left = mouseX+'px'; dot.style.top = mouseY+'px';
         var now = Date.now();
-        if(now - lastT > 38){ lastT = now; spawnSparkle(mouseX, mouseY); }
+        if(now - lastT > 40){ lastT = now; spawnSparkle(mouseX, mouseY); }
     });
 
     (function loop(){
-        glowX += (mouseX-glowX)*0.12;
-        glowY += (mouseY-glowY)*0.12;
+        glowX += (mouseX-glowX)*0.10;
+        glowY += (mouseY-glowY)*0.10;
         glow.style.left = glowX+'px';
         glow.style.top  = glowY+'px';
         requestAnimationFrame(loop);
     })();
 
     function spawnSparkle(x,y){
-        var n = Math.floor(Math.random()*3)+1;
+        var n = Math.floor(Math.random()*2)+1;
         for(var i=0;i<n;i++){
             var p = document.createElement('div');
             var sz = Math.random()*5+2;
             var cols = ['#00D4FF','#ffffff','#00FF88','#a0e4ff'];
             var col = cols[Math.floor(Math.random()*cols.length)];
             var ang = Math.random()*360;
-            var dst = Math.random()*35+8;
-            var dur = Math.random()*600+350;
+            var dst = Math.random()*30+8;
+            var dur = Math.random()*500+300;
             var rad = ang*Math.PI/180;
             var dx = Math.cos(rad)*dst, dy = Math.sin(rad)*dst;
-            p.style.cssText = 'position:fixed;left:'+x+'px;top:'+y+'px;width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:'+col+';pointer-events:none;z-index:999997;transform:translate(-50%,-50%);box-shadow:0 0 '+(sz*2)+'px '+col+';opacity:1;transition:transform '+dur+'ms ease-out,opacity '+dur+'ms ease-out;';
+            p.className = 'sparkle-particle';
+            p.style.cssText = 'left:'+x+'px;top:'+y+'px;width:'+sz+'px;height:'+sz+'px;background:'+col+';box-shadow:0 0 '+(sz*2)+'px '+col+';opacity:1;transform:translate(-50%,-50%);transition:transform '+dur+'ms ease-out,opacity '+dur+'ms ease-out;';
             document.body.appendChild(p);
             requestAnimationFrame(function(){ requestAnimationFrame(function(){
-                p.style.transform='translate(calc(-50% + '+dx+'px),calc(-50% + '+dy+'px)) scale(0.1)';
+                p.style.transform='translate(calc(-50% + '+dx+'px),calc(-50% + '+dy+'px)) scale(0)';
                 p.style.opacity='0';
             }); });
-            setTimeout(function(){ p.parentNode && p.parentNode.removeChild(p); }, dur+60);
+            setTimeout(function(){ if(p.parentNode) p.parentNode.removeChild(p); }, dur+60);
         }
     }
 
     document.addEventListener('mousedown', function(){
-        glow.style.width='60px'; glow.style.height='60px';
-        glow.style.boxShadow='0 0 40px rgba(0,212,255,.8),0 0 90px rgba(0,212,255,.35)';
-        for(var i=0;i<8;i++) spawnSparkle(mouseX,mouseY);
+        glow.style.width='55px'; glow.style.height='55px';
+        glow.style.boxShadow='0 0 35px rgba(0,212,255,.9),0 0 80px rgba(0,212,255,.4)';
+        for(var i=0;i<6;i++) spawnSparkle(mouseX,mouseY);
     });
     document.addEventListener('mouseup', function(){
-        glow.style.width='36px'; glow.style.height='36px';
-        glow.style.boxShadow='0 0 22px rgba(0,212,255,.5),0 0 60px rgba(0,212,255,.18)';
+        glow.style.width='32px'; glow.style.height='32px';
+        glow.style.boxShadow='0 0 20px rgba(0,212,255,.55),0 0 55px rgba(0,212,255,.20)';
     });
 }
 """
+
 
 with gr.Blocks(title="SecureLens", css=custom_css, js=sparkle_js) as demo:
 
