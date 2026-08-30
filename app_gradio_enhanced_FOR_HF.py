@@ -1046,7 +1046,72 @@ def evaluate_model():
     except Exception as e:
         import traceback
         return None, f'<div style="padding:20px;background:#ef4444;color:white;border-radius:10px"><h3>Error</h3><p>{str(e)}</p><pre>{traceback.format_exc()}</pre></div>'
-with gr.Blocks(title="SecureLens", css=custom_css) as demo:
+sparkle_js = """
+function() {
+    // ── Sparkle cursor ──────────────────────────────────
+    var dot = document.createElement('div');
+    dot.id = 'cursor-dot';
+    dot.style.cssText = 'position:fixed;width:8px;height:8px;background:#fff;border-radius:50%;pointer-events:none;z-index:999999;transform:translate(-50%,-50%);box-shadow:0 0 6px #fff,0 0 14px #00D4FF;transition:width .15s,height .15s;';
+    document.body.appendChild(dot);
+
+    var glow = document.createElement('div');
+    glow.id = 'cursor-glow';
+    glow.style.cssText = 'position:fixed;width:36px;height:36px;border-radius:50%;pointer-events:none;z-index:999998;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(0,212,255,.55) 0%,rgba(0,212,255,.15) 45%,transparent 70%);box-shadow:0 0 22px rgba(0,212,255,.5),0 0 60px rgba(0,212,255,.18);mix-blend-mode:screen;transition:width .2s,height .2s,box-shadow .2s;';
+    document.body.appendChild(glow);
+
+    var mouseX=0, mouseY=0, glowX=0, glowY=0, lastT=0;
+
+    document.addEventListener('mousemove', function(e){
+        mouseX = e.clientX; mouseY = e.clientY;
+        dot.style.left = mouseX+'px'; dot.style.top = mouseY+'px';
+        var now = Date.now();
+        if(now - lastT > 38){ lastT = now; spawnSparkle(mouseX, mouseY); }
+    });
+
+    (function loop(){
+        glowX += (mouseX-glowX)*0.12;
+        glowY += (mouseY-glowY)*0.12;
+        glow.style.left = glowX+'px';
+        glow.style.top  = glowY+'px';
+        requestAnimationFrame(loop);
+    })();
+
+    function spawnSparkle(x,y){
+        var n = Math.floor(Math.random()*3)+1;
+        for(var i=0;i<n;i++){
+            var p = document.createElement('div');
+            var sz = Math.random()*5+2;
+            var cols = ['#00D4FF','#ffffff','#00FF88','#a0e4ff'];
+            var col = cols[Math.floor(Math.random()*cols.length)];
+            var ang = Math.random()*360;
+            var dst = Math.random()*35+8;
+            var dur = Math.random()*600+350;
+            var rad = ang*Math.PI/180;
+            var dx = Math.cos(rad)*dst, dy = Math.sin(rad)*dst;
+            p.style.cssText = 'position:fixed;left:'+x+'px;top:'+y+'px;width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:'+col+';pointer-events:none;z-index:999997;transform:translate(-50%,-50%);box-shadow:0 0 '+(sz*2)+'px '+col+';opacity:1;transition:transform '+dur+'ms ease-out,opacity '+dur+'ms ease-out;';
+            document.body.appendChild(p);
+            requestAnimationFrame(function(){ requestAnimationFrame(function(){
+                p.style.transform='translate(calc(-50% + '+dx+'px),calc(-50% + '+dy+'px)) scale(0.1)';
+                p.style.opacity='0';
+            }); });
+            setTimeout(function(){ p.parentNode && p.parentNode.removeChild(p); }, dur+60);
+        }
+    }
+
+    document.addEventListener('mousedown', function(){
+        glow.style.width='60px'; glow.style.height='60px';
+        glow.style.boxShadow='0 0 40px rgba(0,212,255,.8),0 0 90px rgba(0,212,255,.35)';
+        for(var i=0;i<8;i++) spawnSparkle(mouseX,mouseY);
+    });
+    document.addEventListener('mouseup', function(){
+        glow.style.width='36px'; glow.style.height='36px';
+        glow.style.boxShadow='0 0 22px rgba(0,212,255,.5),0 0 60px rgba(0,212,255,.18)';
+    });
+}
+"""
+
+with gr.Blocks(title="SecureLens", css=custom_css, js=sparkle_js) as demo:
+
 
     gr.HTML("""
     <div style="
@@ -1127,112 +1192,6 @@ with gr.Blocks(title="SecureLens", css=custom_css) as demo:
             </div>
         </div>
     </div>
-    """)
-
-    # ── Sparkle cursor JavaScript ────────────────────────────────────────
-    gr.HTML("""
-    <script>
-    (function() {
-        // Create cursor dot (sharp inner point)
-        const dot = document.createElement('div');
-        dot.id = 'cursor-dot';
-        document.body.appendChild(dot);
-
-        // Create glow orb (soft following glow)
-        const glow = document.createElement('div');
-        glow.id = 'cursor-glow';
-        document.body.appendChild(glow);
-
-        let mouseX = 0, mouseY = 0;
-        let glowX = 0,  glowY = 0;
-        let lastSparkle = 0;
-
-        document.addEventListener('mousemove', function(e) {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-
-            // Snap dot to cursor immediately
-            dot.style.left = mouseX + 'px';
-            dot.style.top  = mouseY + 'px';
-
-            // Spawn sparkle every ~40ms
-            const now = Date.now();
-            if (now - lastSparkle > 40) {
-                lastSparkle = now;
-                spawnSparkle(mouseX, mouseY);
-            }
-        });
-
-        // Smooth-lag glow follow
-        function animateGlow() {
-            glowX += (mouseX - glowX) * 0.12;
-            glowY += (mouseY - glowY) * 0.12;
-            glow.style.left = glowX + 'px';
-            glow.style.top  = glowY + 'px';
-            requestAnimationFrame(animateGlow);
-        }
-        animateGlow();
-
-        function spawnSparkle(x, y) {
-            const count = Math.floor(Math.random() * 3) + 1;
-            for (let i = 0; i < count; i++) {
-                const p = document.createElement('div');
-                p.className = 'sparkle-particle';
-
-                const size     = Math.random() * 5 + 2;
-                const colors   = ['#00D4FF','#ffffff','#00FF88','#a0e4ff'];
-                const color    = colors[Math.floor(Math.random() * colors.length)];
-                const angle    = Math.random() * 360;
-                const dist     = Math.random() * 35 + 8;
-                const duration = Math.random() * 600 + 350;
-                const rad      = angle * Math.PI / 180;
-                const dx       = Math.cos(rad) * dist;
-                const dy       = Math.sin(rad) * dist;
-
-                p.style.cssText = [
-                    'position:fixed',
-                    'left:' + x + 'px',
-                    'top:'  + y + 'px',
-                    'width:'  + size + 'px',
-                    'height:' + size + 'px',
-                    'border-radius:50%',
-                    'background:' + color,
-                    'pointer-events:none',
-                    'z-index:999997',
-                    'transform:translate(-50%,-50%)',
-                    'box-shadow:0 0 ' + (size*2) + 'px ' + color,
-                    'opacity:1',
-                    'transition:transform ' + duration + 'ms ease-out, opacity ' + duration + 'ms ease-out'
-                ].join(';');
-
-                document.body.appendChild(p);
-
-                requestAnimationFrame(function() {
-                    requestAnimationFrame(function() {
-                        p.style.transform = 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) scale(0.1)';
-                        p.style.opacity   = '0';
-                    });
-                });
-
-                setTimeout(function() { p.remove(); }, duration + 50);
-            }
-        }
-
-        // Grow glow on click
-        document.addEventListener('mousedown', function() {
-            glow.style.width  = '60px';
-            glow.style.height = '60px';
-            glow.style.boxShadow = '0 0 40px rgba(0,212,255,0.8), 0 0 90px rgba(0,212,255,0.35)';
-            // Burst of sparkles on click
-            for (let i = 0; i < 8; i++) spawnSparkle(mouseX, mouseY);
-        });
-        document.addEventListener('mouseup', function() {
-            glow.style.width  = '36px';
-            glow.style.height = '36px';
-            glow.style.boxShadow = '0 0 22px rgba(0,212,255,0.50), 0 0 60px rgba(0,212,255,0.18)';
-        });
-    })();
-    </script>
     """)
 
     with gr.Tabs():
