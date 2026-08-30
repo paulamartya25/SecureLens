@@ -190,13 +190,196 @@ class TestDataset(Dataset):
             return torch.zeros(3, 224, 224), label
 
 custom_css = """
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+/* ── Base ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
 * { font-family: 'Inter', sans-serif !important; }
-.gradio-container { background: linear-gradient(135deg, #020617, #0a1628) !important; }
-.gr-button-primary { background: linear-gradient(135deg, #0ea5e9, #00D4FF) !important;
-    font-weight: 700 !important; box-shadow: 0 0 28px rgba(0,212,255,0.25) !important; }
-h1,h2,h3 { background: linear-gradient(90deg, #00D4FF, #00FF88);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900 !important; }
+
+/* ── Background ─────────────────────────────────────────── */
+body { background: #020b18 !important; margin: 0; }
+
+.gradio-container {
+    background: #020b18 !important;
+    min-height: 100vh !important;
+    position: relative !important;
+}
+
+/* Animated mesh gradient on right side — matches TechSharthi wave */
+.gradio-container::before {
+    content: '';
+    position: fixed;
+    top: 0; right: -10%; width: 65%; height: 100%;
+    background:
+        radial-gradient(ellipse at 85% 30%, rgba(0,212,255,0.10) 0%, transparent 55%),
+        radial-gradient(ellipse at 95% 75%, rgba(0,255,136,0.07) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 55%, rgba(0,100,200,0.06) 0%, transparent 45%);
+    pointer-events: none;
+    z-index: 0;
+    animation: meshPulse 8s ease-in-out infinite alternate;
+}
+
+@keyframes meshPulse {
+    0%   { opacity: 0.7; transform: scale(1); }
+    100% { opacity: 1.0; transform: scale(1.04); }
+}
+
+/* ── Header / hero ─────────────────────────────────────── */
+.hero-header {
+    position: relative;
+    z-index: 1;
+    padding: 40px 30px 30px;
+    border-bottom: 1px solid rgba(0,212,255,0.12);
+    margin-bottom: 10px;
+    background: linear-gradient(180deg, rgba(0,212,255,0.04) 0%, transparent 100%);
+}
+
+/* ── Tab navigation ─────────────────────────────────────── */
+.tab-nav {
+    background: rgba(2,11,24,0.9) !important;
+    border: 1px solid rgba(0,212,255,0.18) !important;
+    border-radius: 14px !important;
+    padding: 5px !important;
+    backdrop-filter: blur(20px) !important;
+    margin-bottom: 20px !important;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
+}
+
+.tab-nav button {
+    color: #4a6080 !important;
+    font-weight: 600 !important;
+    font-size: 0.88rem !important;
+    border-radius: 10px !important;
+    padding: 10px 16px !important;
+    transition: all 0.25s ease !important;
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    letter-spacing: 0.2px !important;
+}
+
+.tab-nav button.selected {
+    background: linear-gradient(135deg, rgba(0,212,255,0.18), rgba(0,255,136,0.08)) !important;
+    color: #00D4FF !important;
+    border: 1px solid rgba(0,212,255,0.35) !important;
+    box-shadow: 0 0 18px rgba(0,212,255,0.18), inset 0 0 12px rgba(0,212,255,0.06) !important;
+}
+
+.tab-nav button:hover:not(.selected) {
+    background: rgba(0,212,255,0.07) !important;
+    color: #7fb4c8 !important;
+    border-color: rgba(0,212,255,0.15) !important;
+}
+
+/* ── Main content area ─────────────────────────────────── */
+.tabitem > div, .tab-content {
+    background: transparent !important;
+}
+
+/* ── Cards / panels ─────────────────────────────────────── */
+.gr-panel, .gr-form, .gr-box, .block {
+    background: rgba(4,15,30,0.65) !important;
+    border: 1px solid rgba(0,212,255,0.12) !important;
+    border-radius: 16px !important;
+    backdrop-filter: blur(16px) !important;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.35) !important;
+}
+
+/* ── Primary button — cyan gradient ─────────────────────── */
+button.primary, .gr-button-primary, button[data-testid="primary-button"],
+button.lg.primary, button.svelte-cmf5ev.primary {
+    background: linear-gradient(135deg, #006b9f, #00D4FF) !important;
+    color: #fff !important;
+    font-weight: 700 !important;
+    font-size: 1rem !important;
+    letter-spacing: 0.4px !important;
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: 0 0 28px rgba(0,212,255,0.30), 0 4px 16px rgba(0,0,0,0.40) !important;
+    transition: all 0.28s cubic-bezier(.4,0,.2,1) !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+button.primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent, rgba(255,255,255,0.08));
+    pointer-events: none;
+}
+
+button.primary:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 0 45px rgba(0,212,255,0.50), 0 8px 28px rgba(0,0,0,0.45) !important;
+}
+
+/* ── Secondary / outline button ─────────────────────────── */
+button.secondary, .gr-button-secondary {
+    background: transparent !important;
+    border: 1.5px solid rgba(0,212,255,0.40) !important;
+    color: #00D4FF !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    transition: all 0.25s ease !important;
+}
+
+button.secondary:hover {
+    background: rgba(0,212,255,0.10) !important;
+    box-shadow: 0 0 20px rgba(0,212,255,0.22) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* ── Image upload area ─────────────────────────────────── */
+.image-container, .upload-container, [data-testid="image"] {
+    border: 2px dashed rgba(0,212,255,0.28) !important;
+    border-radius: 16px !important;
+    background: rgba(0,212,255,0.02) !important;
+    transition: border-color 0.3s ease !important;
+}
+
+.image-container:hover {
+    border-color: rgba(0,212,255,0.55) !important;
+    background: rgba(0,212,255,0.04) !important;
+}
+
+/* ── Labels ─────────────────────────────────────────────── */
+label span, .gr-label span, .label-wrap span {
+    color: #4a6080 !important;
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.8px !important;
+}
+
+/* ── Sliders ─────────────────────────────────────────────── */
+input[type=range] {
+    accent-color: #00D4FF !important;
+    height: 4px !important;
+}
+
+/* ── Radio buttons ─────────────────────────────────────── */
+input[type=radio] { accent-color: #00D4FF !important; }
+.gr-radio-group label span { text-transform: none !important; font-size: 0.9rem !important; }
+
+/* ── Markdown headings ─────────────────────────────────── */
+h1, h2, h3 {
+    font-weight: 800 !important;
+    letter-spacing: -0.5px !important;
+}
+
+/* ── Markdown body text ─────────────────────────────────── */
+.prose p, .prose li, p { color: #94a3b8 !important; }
+
+/* ── Scrollbar ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #020b18; }
+::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.30); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,212,255,0.55); }
+
+/* ── Footer ─────────────────────────────────────────────── */
+.footer { display: none !important; }
 """
+
 
 def classify_fhe(image):
     if image is None:
@@ -823,7 +1006,86 @@ def evaluate_model():
         return None, f'<div style="padding:20px;background:#ef4444;color:white;border-radius:10px"><h3>Error</h3><p>{str(e)}</p><pre>{traceback.format_exc()}</pre></div>'
 with gr.Blocks(title="SecureLens", css=custom_css) as demo:
 
-    gr.Markdown("# 🔐 SecureLens - TRUE Fully Homomorphic Encryption\n## Privacy-Preserving Pneumonia Detection\n---")
+    gr.HTML("""
+    <div style="
+        position:relative;z-index:1;padding:44px 36px 32px;
+        border-bottom:1px solid rgba(0,212,255,0.13);
+        background:linear-gradient(180deg,rgba(0,212,255,0.05) 0%,transparent 100%);
+        margin-bottom:8px;
+    ">
+        <!-- Top badge row -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+            <span style="
+                background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.35);
+                color:#00D4FF;font-size:0.78rem;font-weight:700;letter-spacing:1.2px;
+                padding:5px 14px;border-radius:20px;text-transform:uppercase;
+            ">🔐 128-bit CKKS Encryption</span>
+            <span style="
+                background:rgba(0,255,136,0.10);border:1px solid rgba(0,255,136,0.30);
+                color:#00FF88;font-size:0.78rem;font-weight:700;letter-spacing:1.2px;
+                padding:5px 14px;border-radius:20px;text-transform:uppercase;
+            ">✅ TRUE FHE — Physical Separation</span>
+            <span style="
+                background:rgba(138,43,226,0.10);border:1px solid rgba(138,43,226,0.30);
+                color:#BA55D3;font-size:0.78rem;font-weight:700;letter-spacing:1.2px;
+                padding:5px 14px;border-radius:20px;text-transform:uppercase;
+            ">🧠 ResNet-18 + TenSEAL</span>
+        </div>
+
+        <!-- Main title -->
+        <h1 style="
+            font-size:clamp(2rem,4vw,3.2rem);font-weight:900;margin:0 0 6px;
+            line-height:1.1;letter-spacing:-1px;color:#ffffff;
+        ">
+            SecureLens —
+            <span style="
+                background:linear-gradient(90deg,#00D4FF,#00FF88);
+                -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+            ">Privacy-Preserving</span>
+        </h1>
+        <h2 style="
+            font-size:clamp(1.2rem,2.5vw,2rem);font-weight:700;margin:0 0 14px;
+            color:#e2e8f0;letter-spacing:-0.5px;
+        ">
+            Medical AI That Works on
+            <span style="color:#00D4FF;">Encrypted Data</span>
+        </h2>
+        <p style="
+            color:#64748b;font-size:1rem;max-width:620px;line-height:1.7;margin:0 0 24px;
+        ">
+            Diagnose Pneumonia from Chest X-Rays without ever exposing patient data.
+            The server computes on ciphertext — <strong style="color:#94a3b8;">mathematically impossible</strong> to decrypt.
+        </p>
+
+        <!-- Stats row -->
+        <div style="display:flex;gap:28px;flex-wrap:wrap;">
+            <div style="text-align:center;">
+                <div style="font-size:1.6rem;font-weight:900;color:#00D4FF;">91.19%</div>
+                <div style="font-size:0.72rem;color:#4a6080;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Accuracy</div>
+            </div>
+            <div style="width:1px;background:rgba(0,212,255,0.15);"></div>
+            <div style="text-align:center;">
+                <div style="font-size:1.6rem;font-weight:900;color:#00FF88;">99.74%</div>
+                <div style="font-size:0.72rem;color:#4a6080;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Recall</div>
+            </div>
+            <div style="width:1px;background:rgba(0,212,255,0.15);"></div>
+            <div style="text-align:center;">
+                <div style="font-size:1.6rem;font-weight:900;color:#BA55D3;">0.9656</div>
+                <div style="font-size:0.72rem;color:#4a6080;text-transform:uppercase;letter-spacing:1px;font-weight:600;">ROC-AUC</div>
+            </div>
+            <div style="width:1px;background:rgba(0,212,255,0.15);"></div>
+            <div style="text-align:center;">
+                <div style="font-size:1.6rem;font-weight:900;color:#FFD700;">326 KB</div>
+                <div style="font-size:0.72rem;color:#4a6080;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Ciphertext</div>
+            </div>
+            <div style="width:1px;background:rgba(0,212,255,0.15);"></div>
+            <div style="text-align:center;">
+                <div style="font-size:1.6rem;font-weight:900;color:#FF4D6D;">Only 1</div>
+                <div style="font-size:0.72rem;color:#4a6080;text-transform:uppercase;letter-spacing:1px;font-weight:600;">False Negative</div>
+            </div>
+        </div>
+    </div>
+    """)
 
     with gr.Tabs():
         with gr.Tab("🔒 TRUE FHE Classification"):
