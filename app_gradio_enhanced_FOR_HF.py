@@ -1027,103 +1027,76 @@ def evaluate_model():
     except Exception as e:
         import traceback
         return None, f'<div style="padding:20px;background:#ef4444;color:white;border-radius:10px"><h3>Error</h3><p>{str(e)}</p><pre>{traceback.format_exc()}</pre></div>'
-sparkle_js = """
-function() {
+sparkle_head = """
+<script>
+window.addEventListener('load', function() {
     setTimeout(function() {
-        /* ── Glowing orb that follows cursor ─────────────────── */
+
+        /* ── Glowing orb that follows cursor ── */
         var gl = document.createElement('div');
-        gl.style.cssText = [
-            'position:fixed',
-            'width:44px','height:44px',
-            'border-radius:50%',
-            'pointer-events:none',
-            'z-index:2147483647',
-            'transform:translate(-50%,-50%)',
-            'background:radial-gradient(circle,rgba(0,212,255,.75)0%,rgba(0,212,255,.25)50%,transparent70%)',
-            'box-shadow:0 0 28px 6px rgba(0,212,255,.55),0 0 60px 10px rgba(0,212,255,.20)',
-            'mix-blend-mode:screen',
-            'left:-100px','top:-100px'
-        ].join(';');
+        gl.style.cssText = 'position:fixed;width:44px;height:44px;border-radius:50%;pointer-events:none;z-index:2147483647;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(0,212,255,.8)0%,rgba(0,212,255,.3)50%,transparent70%);box-shadow:0 0 30px 8px rgba(0,212,255,.6),0 0 65px 12px rgba(0,212,255,.22);mix-blend-mode:screen;left:-200px;top:-200px;transition:width .18s,height .18s,box-shadow .18s;';
         document.body.appendChild(gl);
 
         var mx=0, my=0, gx=0, gy=0, last=0;
 
         document.addEventListener('mousemove', function(e){
-            mx = e.clientX; my = e.clientY;
-            var now = Date.now();
-            if(now - last > 45){ last = now; emit(mx, my); }
-        });
+            mx=e.clientX; my=e.clientY;
+            var now=Date.now();
+            if(now-last>42){last=now;emit(mx,my);}
+        }, true);
 
-        /* Smooth glow follow */
         (function loop(){
-            gx += (mx - gx) * 0.13;
-            gy += (my - gy) * 0.13;
-            gl.style.left = gx + 'px';
-            gl.style.top  = gy + 'px';
+            gx+=(mx-gx)*0.13; gy+=(my-gy)*0.13;
+            gl.style.left=gx+'px'; gl.style.top=gy+'px';
             requestAnimationFrame(loop);
         })();
 
-        /* ── Emit sparkle particles ─────────────────────────── */
-        function emit(ox, oy) {
-            var count = Math.floor(Math.random()*3) + 2;
-            for(var i=0; i<count; i++){
-                var s    = document.createElement('div');
-                var size = Math.random()*7 + 3;
-                var cols = ['#00D4FF','#ffffff','#7ee8ff','#00FF88','#b3f0ff'];
-                var col  = cols[Math.floor(Math.random()*cols.length)];
-                var ang  = Math.random()*Math.PI*2;
-                var spd  = Math.random()*55 + 20;
-                var life = Math.random()*550 + 350;
-                var dx   = Math.cos(ang)*spd;
-                var dy   = Math.sin(ang)*spd;
-
-                s.style.cssText = [
-                    'position:fixed',
-                    'left:'+ox+'px','top:'+oy+'px',
-                    'width:'+size+'px','height:'+size+'px',
-                    'border-radius:50%',
-                    'background:'+col,
-                    'pointer-events:none',
-                    'z-index:2147483646',
-                    'box-shadow:0 0 '+(size+5)+'px 2px '+col,
-                    'opacity:1',
-                    'transform:translate(-50%,-50%)'
-                ].join(';');
+        /* ── Sparkle particles ── */
+        function emit(ox,oy){
+            var n=Math.floor(Math.random()*3)+2;
+            for(var i=0;i<n;i++){
+                var s=document.createElement('div');
+                var sz=Math.random()*8+3;
+                var col=['#00D4FF','#ffffff','#7ee8ff','#00FF88','#b3f0ff'][Math.floor(Math.random()*5)];
+                var ang=Math.random()*Math.PI*2;
+                var spd=Math.random()*60+22;
+                var life=Math.random()*600+350;
+                var vx=Math.cos(ang)*spd, vy=Math.sin(ang)*spd;
+                s.style.cssText='position:fixed;left:'+ox+'px;top:'+oy+'px;width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:'+col+';pointer-events:none;z-index:2147483646;box-shadow:0 0 '+(sz+6)+'px 2px '+col+';opacity:1;transform:translate(-50%,-50%);';
                 document.body.appendChild(s);
-
-                var t0 = Date.now();
-                (function(el, sx, sy, vx, vy, lt){
+                var t0=Date.now();
+                (function(el,sx,sy,dx,dy,lt){
                     function step(){
-                        var el_prog = (Date.now()-t0)/lt;
-                        if(el_prog >= 1){ if(el.parentNode) el.parentNode.removeChild(el); return; }
-                        el.style.left    = (sx + vx*el_prog) + 'px';
-                        el.style.top     = (sy + vy*el_prog + 30*el_prog*el_prog) + 'px';
-                        el.style.opacity = 1 - el_prog;
-                        el.style.transform = 'translate(-50%,-50%) scale('+(1-el_prog*0.6)+')';
+                        var p=(Date.now()-t0)/lt;
+                        if(p>=1){if(el.parentNode)el.parentNode.removeChild(el);return;}
+                        el.style.left=(sx+dx*p)+'px';
+                        el.style.top=(sy+dy*p+28*p*p)+'px';
+                        el.style.opacity=''+(1-p);
+                        el.style.transform='translate(-50%,-50%) scale('+(1-p*.65)+')';
                         requestAnimationFrame(step);
                     }
                     requestAnimationFrame(step);
-                })(s, ox, oy, dx, dy, life);
+                })(s,ox,oy,vx,vy,life);
             }
         }
 
-        /* Click burst */
-        document.addEventListener('mousedown', function(){
-            gl.style.boxShadow = '0 0 50px 14px rgba(0,212,255,.9),0 0 90px 20px rgba(0,212,255,.40)';
-            gl.style.width='58px'; gl.style.height='58px';
-            for(var i=0;i<10;i++) emit(mx,my);
-        });
-        document.addEventListener('mouseup', function(){
-            gl.style.boxShadow = '0 0 28px 6px rgba(0,212,255,.55),0 0 60px 10px rgba(0,212,255,.20)';
-            gl.style.width='44px'; gl.style.height='44px';
-        });
+        document.addEventListener('mousedown',function(){
+            gl.style.width='60px';gl.style.height='60px';
+            gl.style.boxShadow='0 0 55px 16px rgba(0,212,255,.95),0 0 100px 22px rgba(0,212,255,.45)';
+            for(var i=0;i<10;i++)emit(mx,my);
+        },true);
+        document.addEventListener('mouseup',function(){
+            gl.style.width='44px';gl.style.height='44px';
+            gl.style.boxShadow='0 0 30px 8px rgba(0,212,255,.6),0 0 65px 12px rgba(0,212,255,.22)';
+        },true);
 
-    }, 1200); /* wait 1.2s for Gradio DOM to be ready */
-}
+    }, 1500);
+});
+</script>
 """
 
+with gr.Blocks(title="SecureLens", css=custom_css, head=sparkle_head) as demo:
 
-with gr.Blocks(title="SecureLens", css=custom_css, js=sparkle_js) as demo:
 
 
     gr.HTML("""
