@@ -194,7 +194,13 @@ custom_css = """
 
 /* ── Base ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
-* { font-family: 'Inter', sans-serif !important; }
+
+/* ── Custom sparkle cursor (SVG data URI — pure CSS, no JS) ── */
+*, *::before, *::after {
+    font-family: 'Inter', sans-serif !important;
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cdefs%3E%3Cfilter id='g' x='-50%25' y='-50%25' width='200%25' height='200%25'%3E%3CfeGaussianBlur stdDeviation='1.8' result='b'/%3E%3CfeMerge%3E%3CfeMergeNode in='b'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='9' fill='rgba(0%2C212%2C255%2C0.12)'/%3E%3Ccircle cx='16' cy='16' r='5' fill='rgba(0%2C212%2C255%2C0.30)'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%2300D4FF' filter='url(%23g)'/%3E%3Cline x1='16' y1='1' x2='16' y2='7' stroke='%2300D4FF' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='16' y1='25' x2='16' y2='31' stroke='%2300D4FF' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='1' y1='16' x2='7' y2='16' stroke='%2300D4FF' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='25' y1='16' x2='31' y2='16' stroke='%2300D4FF' stroke-width='2' stroke-linecap='round'/%3E%3Cline x1='4.5' y1='4.5' x2='8.5' y2='8.5' stroke='%2300D4FF' stroke-width='1.5' stroke-linecap='round' opacity='0.65'/%3E%3Cline x1='23.5' y1='23.5' x2='27.5' y2='27.5' stroke='%2300D4FF' stroke-width='1.5' stroke-linecap='round' opacity='0.65'/%3E%3Cline x1='4.5' y1='27.5' x2='8.5' y2='23.5' stroke='%2300D4FF' stroke-width='1.5' stroke-linecap='round' opacity='0.65'/%3E%3Cline x1='23.5' y1='8.5' x2='27.5' y2='4.5' stroke='%2300D4FF' stroke-width='1.5' stroke-linecap='round' opacity='0.65'/%3E%3C/svg%3E") 16 16, crosshair !important;
+}
+
 
 /* ── Background ─────────────────────────────────────────── */
 body { background: #020b18 !important; margin: 0; }
