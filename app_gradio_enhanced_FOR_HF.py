@@ -1029,59 +1029,96 @@ def evaluate_model():
         return None, f'<div style="padding:20px;background:#ef4444;color:white;border-radius:10px"><h3>Error</h3><p>{str(e)}</p><pre>{traceback.format_exc()}</pre></div>'
 sparkle_js = """
 function() {
-    // ── Sparkle cursor — glow + particles on top of REAL cursor ──
-    var glow = document.createElement('div');
-    glow.id = 'cursor-glow';
-    document.body.appendChild(glow);
+    setTimeout(function() {
+        /* ── Glowing orb that follows cursor ─────────────────── */
+        var gl = document.createElement('div');
+        gl.style.cssText = [
+            'position:fixed',
+            'width:44px','height:44px',
+            'border-radius:50%',
+            'pointer-events:none',
+            'z-index:2147483647',
+            'transform:translate(-50%,-50%)',
+            'background:radial-gradient(circle,rgba(0,212,255,.75)0%,rgba(0,212,255,.25)50%,transparent70%)',
+            'box-shadow:0 0 28px 6px rgba(0,212,255,.55),0 0 60px 10px rgba(0,212,255,.20)',
+            'mix-blend-mode:screen',
+            'left:-100px','top:-100px'
+        ].join(';');
+        document.body.appendChild(gl);
 
-    var mouseX=0, mouseY=0, glowX=0, glowY=0, lastT=0;
+        var mx=0, my=0, gx=0, gy=0, last=0;
 
-    document.addEventListener('mousemove', function(e){
-        mouseX = e.clientX; mouseY = e.clientY;
-        var now = Date.now();
-        if(now - lastT > 40){ lastT = now; spawnSparkle(mouseX, mouseY); }
-    });
+        document.addEventListener('mousemove', function(e){
+            mx = e.clientX; my = e.clientY;
+            var now = Date.now();
+            if(now - last > 45){ last = now; emit(mx, my); }
+        });
 
-    (function loop(){
-        glowX += (mouseX-glowX)*0.10;
-        glowY += (mouseY-glowY)*0.10;
-        glow.style.left = glowX+'px';
-        glow.style.top  = glowY+'px';
-        requestAnimationFrame(loop);
-    })();
+        /* Smooth glow follow */
+        (function loop(){
+            gx += (mx - gx) * 0.13;
+            gy += (my - gy) * 0.13;
+            gl.style.left = gx + 'px';
+            gl.style.top  = gy + 'px';
+            requestAnimationFrame(loop);
+        })();
 
-    function spawnSparkle(x,y){
-        var n = Math.floor(Math.random()*2)+1;
-        for(var i=0;i<n;i++){
-            var p = document.createElement('div');
-            var sz = Math.random()*5+2;
-            var cols = ['#00D4FF','#ffffff','#00FF88','#a0e4ff'];
-            var col = cols[Math.floor(Math.random()*cols.length)];
-            var ang = Math.random()*360;
-            var dst = Math.random()*30+8;
-            var dur = Math.random()*500+300;
-            var rad = ang*Math.PI/180;
-            var dx = Math.cos(rad)*dst, dy = Math.sin(rad)*dst;
-            p.className = 'sparkle-particle';
-            p.style.cssText = 'left:'+x+'px;top:'+y+'px;width:'+sz+'px;height:'+sz+'px;background:'+col+';box-shadow:0 0 '+(sz*2)+'px '+col+';opacity:1;transform:translate(-50%,-50%);transition:transform '+dur+'ms ease-out,opacity '+dur+'ms ease-out;';
-            document.body.appendChild(p);
-            requestAnimationFrame(function(){ requestAnimationFrame(function(){
-                p.style.transform='translate(calc(-50% + '+dx+'px),calc(-50% + '+dy+'px)) scale(0)';
-                p.style.opacity='0';
-            }); });
-            setTimeout(function(){ if(p.parentNode) p.parentNode.removeChild(p); }, dur+60);
+        /* ── Emit sparkle particles ─────────────────────────── */
+        function emit(ox, oy) {
+            var count = Math.floor(Math.random()*3) + 2;
+            for(var i=0; i<count; i++){
+                var s    = document.createElement('div');
+                var size = Math.random()*7 + 3;
+                var cols = ['#00D4FF','#ffffff','#7ee8ff','#00FF88','#b3f0ff'];
+                var col  = cols[Math.floor(Math.random()*cols.length)];
+                var ang  = Math.random()*Math.PI*2;
+                var spd  = Math.random()*55 + 20;
+                var life = Math.random()*550 + 350;
+                var dx   = Math.cos(ang)*spd;
+                var dy   = Math.sin(ang)*spd;
+
+                s.style.cssText = [
+                    'position:fixed',
+                    'left:'+ox+'px','top:'+oy+'px',
+                    'width:'+size+'px','height:'+size+'px',
+                    'border-radius:50%',
+                    'background:'+col,
+                    'pointer-events:none',
+                    'z-index:2147483646',
+                    'box-shadow:0 0 '+(size+5)+'px 2px '+col,
+                    'opacity:1',
+                    'transform:translate(-50%,-50%)'
+                ].join(';');
+                document.body.appendChild(s);
+
+                var t0 = Date.now();
+                (function(el, sx, sy, vx, vy, lt){
+                    function step(){
+                        var el_prog = (Date.now()-t0)/lt;
+                        if(el_prog >= 1){ if(el.parentNode) el.parentNode.removeChild(el); return; }
+                        el.style.left    = (sx + vx*el_prog) + 'px';
+                        el.style.top     = (sy + vy*el_prog + 30*el_prog*el_prog) + 'px';
+                        el.style.opacity = 1 - el_prog;
+                        el.style.transform = 'translate(-50%,-50%) scale('+(1-el_prog*0.6)+')';
+                        requestAnimationFrame(step);
+                    }
+                    requestAnimationFrame(step);
+                })(s, ox, oy, dx, dy, life);
+            }
         }
-    }
 
-    document.addEventListener('mousedown', function(){
-        glow.style.width='55px'; glow.style.height='55px';
-        glow.style.boxShadow='0 0 35px rgba(0,212,255,.9),0 0 80px rgba(0,212,255,.4)';
-        for(var i=0;i<6;i++) spawnSparkle(mouseX,mouseY);
-    });
-    document.addEventListener('mouseup', function(){
-        glow.style.width='32px'; glow.style.height='32px';
-        glow.style.boxShadow='0 0 20px rgba(0,212,255,.55),0 0 55px rgba(0,212,255,.20)';
-    });
+        /* Click burst */
+        document.addEventListener('mousedown', function(){
+            gl.style.boxShadow = '0 0 50px 14px rgba(0,212,255,.9),0 0 90px 20px rgba(0,212,255,.40)';
+            gl.style.width='58px'; gl.style.height='58px';
+            for(var i=0;i<10;i++) emit(mx,my);
+        });
+        document.addEventListener('mouseup', function(){
+            gl.style.boxShadow = '0 0 28px 6px rgba(0,212,255,.55),0 0 60px 10px rgba(0,212,255,.20)';
+            gl.style.width='44px'; gl.style.height='44px';
+        });
+
+    }, 1200); /* wait 1.2s for Gradio DOM to be ready */
 }
 """
 
